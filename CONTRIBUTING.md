@@ -8,10 +8,11 @@ Bản nháp của Sơn và Triển, chốt trong họp 07/10/2026. Áp dụng ch
 | --- | --- | --- |
 | `main` | Bản đã demo hoặc nộp. Chỉ merge từ `develop` ở các mốc (demo 30/10, RC 03/12, bản cuối 09/12) | Triển hoặc Sơn |
 | `develop` | Nhánh tích hợp; staging deploy từ đây | Qua PR, sau 1 review |
-| `feature/UCxx-<mo-ta-ngan>` | Một task. Ví dụ `feature/UC12-vnpay-checkout`, `feature/UC24-proposal-actions` | |
-| `fix/UCxx-<mo-ta>` | Sửa bug, kèm số issue nếu có | |
-| `chore/<mo-ta>` | Cấu hình, công cụ, tài liệu không gắn UC. Ví dụ `chore/eslint-config` | |
+| `<ten>w<tuan>-<mo-ta-ngan>` | Một task (tính năng, sửa bug, cấu hình, tài liệu). Ví dụ `tsonw1-fe-scaffold`, `tsonw3-uc09-purchase-flow` | |
 
+- `<ten>`: tên viết tắt không dấu, mỗi người tự chọn một lần và dùng cố định (ví dụ `tson`). `<tuan>`: số tuần dự án (tuần 1 bắt đầu 05/10/2026). `<mo-ta-ngan>`: vài chữ nói nhánh làm gì; task gắn UC thì mở đầu bằng mã UC (`uc09-…`), sửa bug thì mở đầu bằng `fix-`.
+- Loại thay đổi (tính năng, sửa bug, cấu hình) thể hiện ở `type` của commit, không ở tên nhánh.
+- Nhánh `tsonw1` (bộ cấu hình, tạo trước khi chốt quy ước) giữ nguyên tên.
 - Tên nhánh viết thường, nối bằng gạch ngang, không dấu.
 - Không commit thẳng lên `main` hay `develop`. Không `git push --force` lên nhánh chung.
 - Nhánh sống tối đa khoảng 3 ngày; lâu hơn thì chia nhỏ task.
