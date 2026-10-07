@@ -8,6 +8,10 @@ argument-hint: "[UCxx hoặc mô tả task]"
 
 Đầu vào: $ARGUMENTS.
 
+0. **Có gì mới** (làm trước tiên, ngắn gọn):
+   - `git fetch origin`. Nếu nhánh `develop` trên máy cũ hơn `origin/develop` (`git log develop..origin/develop` có commit), nhắc người dùng **lấy code mới trước** (GitHub Desktop: Fetch → Pull, hoặc để Claude chạy `git switch develop && git pull`) rồi mới làm tiếp.
+   - Liệt kê thay đổi trong tài liệu chung kể từ lần người dùng lấy code gần nhất (`git log develop..origin/develop`); nếu đã mới nhất thì lấy 3 ngày gần đây (`git log origin/develop --since="3 days ago"`). Chỉ xét: `docs/handoff/OPEN_QUESTIONS.md`, `docs/handoff/STATUS.md`, `docs/spec/`, `docs/plan/`, `docs/api/`, `docs/reports/tuan-*/CHOT-*.md`, `CLAUDE.md`, `CONTRIBUTING.md`, file vai trò của người dùng.
+   - Báo tối đa 5 dòng, **chỉ những thay đổi có tên người dùng ở cột "Ảnh hưởng ai"** hoặc chạm thư mục họ sở hữu, mỗi dòng: đổi gì → người dùng cần sửa gì. Không có gì liên quan thì nói "Không có thay đổi liên quan tới bạn".
 1. **Đọc ngữ cảnh:**
    - `CLAUDE.local.md` để biết người dùng là ai và file vai trò của họ;
    - `docs/handoff/STATUS.md`;

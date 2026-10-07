@@ -32,7 +32,7 @@ Thiếu chế độ thì hỏi người dùng muốn `xuat` hay `nhap`.
 
 1. Hỏi người dùng dán câu trả lời của Claude web (hoặc đường dẫn file đã lưu), và những điểm họp đã sửa hay bác.
 2. Kiểm tra câu trả lời có đủ các mục theo khuôn trong `_MAU-gui-claude-web.md` (`## A.` đến `## F.`). Thiếu mục nào thì báo, không tự bịa phần thiếu.
-3. **Đối chiếu trước khi ghi:** đề xuất nào trái `docs/spec/*`, `decisions.md`, phạm vi trong `CLAUDE.md`, hoặc bịa endpoint/field/mã lỗi thì liệt kê ra và hỏi; không nhập. Đổi spec chỉ được ghi thành việc của Huy Trường, không sửa `docs/spec/`.
+3. **Đối chiếu trước khi ghi** theo mục "Đồng bộ thông tin" trong `CONTRIBUTING.md`. In **bảng mâu thuẫn** (cột: # · Claude web nói · Repo / tài liệu nói · Loại mâu thuẫn · Ai thắng theo luật · Đề xuất xử lý), gồm: báo "xong" thiếu bằng chứng; đổi điều đã chốt trong `OPEN_QUESTIONS.md`; trái `docs/spec/*`, `decisions.md` hoặc phạm vi trong `CLAUDE.md`; bịa endpoint/field/mã lỗi; dựa trên thông tin cũ. Hỏi người dùng từng dòng (họp đã quyết thế nào). Dòng chưa có quyết định thì **không nhập**, ghi thành câu hỏi mới trong `OPEN_QUESTIONS.md`. Đổi spec chỉ được ghi thành việc của Huy Trường, không sửa `docs/spec/`.
 4. Hiện danh sách thay đổi sẽ ghi (file nào, dòng nào, từ gì thành gì), chờ người dùng đồng ý từng nhóm:
    - `docs/handoff/OPEN_QUESTIONS.md`: câu đóng (chuyển sang "Đã trả lời", ghi "chốt trong họp dd/mm"), câu mới (đủ cột Cụm, Ảnh hưởng ai);
    - `docs/handoff/STATUS.md`: dòng từng người;

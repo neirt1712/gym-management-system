@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git switch *)",
+      "Bash(git fetch *)",
+      "Bash(node tools/report-docx/*)",
+      "Edit(/docs/handoff/**)",
+      "Edit(/docs/reports/**)",
+      "Bash(npm run *)",
+      "Bash(npx newman run *)",
+      "Bash(npx playwright test *)",
+      "Edit(/tests/**)",
+      "Edit(/docs/process/**)",
+      "Edit(/docs/plan/preparation.md)"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(npm install *)",
+      "Edit(/docs/spec/**)"
+    ],
+    "deny": [
+      "Edit(/backend/src/**)",
+      "Edit(/frontend/src/**)",
+      "Edit(/docs/api/openapi.yaml)"
+    ]
+  }
+}
