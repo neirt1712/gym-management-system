@@ -77,7 +77,7 @@ Tài liệu khác:
 
 | Tiền tố | Ai dùng | Skill |
 | --- | --- | --- |
-| `team-` | Cả nhóm | `team-start`, `team-finish`, `team-handoff`, `team-api-cr` |
+| `team-` | Cả nhóm | `team-start`, `team-finish`, `team-handoff`, `team-api-cr`, `team-report` (báo cáo tuần cá nhân), `team-week-close` (tổng hợp tuần, Huy Trường) |
 | `fe-` | Sơn, Bằng | `fe-screen`, `fe-api-hook`, `fe-ui-check` |
 | `be-` | Triển, Hồng Anh | `be-endpoint`, `be-schema-change`, `be-check` |
 | `fe-lead-` | Chỉ Sơn (máy cá nhân) | `fe-lead-week`, `fe-lead-review`, `fe-lead-contract` |

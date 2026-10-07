@@ -1,0 +1,19 @@
+{
+  "name": "gym-report-docx",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Đổi báo cáo tuần (.md) sang Word (.docx). Dùng bởi skill team-report và team-week-close.",
+  "type": "module",
+  "bin": {
+    "md2docx": "./md2docx.mjs"
+  },
+  "scripts": {
+    "md2docx": "node md2docx.mjs"
+  },
+  "dependencies": {
+    "docx": "^9.5.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
