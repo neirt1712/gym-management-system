@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git switch *)",
+      "Bash(git fetch *)",
+      "Bash(node tools/report-docx/*)",
+      "Edit(/docs/handoff/**)",
+      "Edit(/docs/reports/**)",
+      "Bash(npm run *)",
+      "Bash(npx prisma generate*)",
+      "Bash(docker compose ps*)",
+      "Bash(docker compose up *)",
+      "Bash(docker compose logs *)",
+      "Edit(/backend/**)",
+      "Edit(/docker-compose.yml)",
+      "Edit(/.github/workflows/**)",
+      "Edit(/docs/api/error-codes.md)",
+      "Edit(/docs/schema-requests/**)"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(npm install *)",
+      "Edit(/backend/src/common/**)",
+      "Bash(npx prisma migrate *)"
+    ],
+    "deny": [
+      "Edit(/frontend/**)",
+      "Edit(/docs/spec/**)",
+      "Edit(/docs/api/openapi.yaml)"
+    ]
+  }
+}

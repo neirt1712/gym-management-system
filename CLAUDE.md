@@ -34,7 +34,7 @@ Tài liệu khác:
 | Huy Trường | PM | `docs/team/roles/pm.md` |
 
 - Cặp review chéo: Triển ↔ Hồng Anh, Sơn ↔ Bằng.
-- Người đang dùng Claude khai vai trò trong `CLAUDE.local.md` (không commit), và file đó import file vai trò của họ.
+- Người đang dùng Claude khai vai trò trong `CLAUDE.local.md` (không commit), và file đó import file vai trò của họ. Mẫu `CLAUDE.local.md`, `settings.local.json` (quyền theo vai trò) và skill riêng của Lead cho từng người: `docs/team/claude-local/<ten>/` (cách chép trong `README.md` của thư mục đó).
 - Chỉ sửa trong phạm vi vai trò. Việc ngoài phạm vi thì đề xuất, tạo CR hoặc đưa patch; không sửa thẳng.
 
 ## Kiến trúc (ADR 0001, đã chốt 06/10: TypeScript)
