@@ -4,15 +4,23 @@ File này giữ cho hai người code ra cùng một kiểu. Phần giao diện 
 
 ## Stack
 
-React 18, Vite, TypeScript strict, React Router 6, TanStack Query 5, Ant Design 5, dayjs (timezone `Asia/Ho_Chi_Minh`), FullCalendar, html5-qrcode, qrcode.react, Recharts. Test: Vitest + React Testing Library; E2E ở `../tests/e2e` (Playwright).
-Không thêm thư viện mới khi chưa hỏi FE Lead (Sơn).
+Đã cài (xem `package.json`):
+
+- Chạy: React 18, React Router 6, TanStack Query 5, Ant Design 5 + `@ant-design/icons`, dayjs (timezone `Asia/Ho_Chi_Minh`), openapi-fetch.
+- Công cụ: Vite + `@vitejs/plugin-react`, TypeScript strict, ESLint (typescript-eslint, react-hooks, react-refresh, eslint-config-prettier), Prettier, husky + lint-staged (hook ở `../.husky/pre-commit`), openapi-typescript.
+- Test: Vitest + jsdom, React Testing Library (`react`, `dom`, `jest-dom`, `user-event`); E2E ở `../tests/e2e` (Playwright).
+- Font Be Vietnam Pro qua Google Fonts `<link>` trong `index.html`. Import tương đối, không dùng alias `@/`.
+
+Cài khi tới việc (đã duyệt, chưa cài): `@stoplight/prism-cli`, `concurrently` (PR lớp API, 08/10); FullCalendar, html5-qrcode, qrcode.react, Recharts (tuần dùng tới).
+Không thêm thư viện ngoài danh sách này khi chưa hỏi FE Lead (Sơn).
 
 ## Lệnh
 
-- `npm run dev` — chạy với API thật (`VITE_API_URL`)
-- `npm run dev:mock` — chạy với mock Prism từ `../docs/api/openapi.yaml`
-- `npm run gen:api` — sinh `src/api/schema.d.ts` từ openapi.yaml. Không sửa tay file này.
-- `npm run lint`, `npm run typecheck`, `npm run test -- <đường dẫn>`
+- `npm run dev` — chạy app; `VITE_AUTH_MODE=fake` (mặc định trong `.env.example`) đăng nhập bằng tài khoản mẫu, `http` gọi `VITE_API_URL`
+- `npm run dev:mock` — chạy với mock Prism từ `../docs/api/openapi.yaml` (có từ PR lớp API)
+- `npm run gen:api` — sinh `src/api/schema.d.ts` từ openapi.yaml (có từ PR lớp API). Không sửa tay file này.
+- `npm run lint`, `npm run typecheck`, `npm run test -- <đường dẫn>`, `npm run build`
+- `npm run format` — Prettier sửa format toàn bộ `src/`; `npm run test:watch` — chạy test liên tục khi sửa
 
 ## Cấu trúc thư mục
 
@@ -30,11 +38,11 @@ src/
 
 ## Ai sở hữu gì (sửa ngoài phạm vi thì báo người kia trước)
 
-| Sơn (FE Lead) | Bằng (FE Sub) |
-| --- | --- |
-| `app/`, `api/` | `theme/`, `components/` |
+| Sơn (FE Lead)                                                                     | Bằng (FE Sub)                                                                                                                           |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/`, `api/`                                                                    | `theme/`, `components/`                                                                                                                 |
 | `features/`: auth, profile, purchase, subscriptions, appointments, classes-member | `features/`: packages-admin, users-admin, staff-counter, check-in, trainer-members, availability, classes-admin, notifications, reports |
-| `pages/public/*`, `pages/member/*`, lịch của PT (`pages/trainer/Schedule*`) | `pages/staff/*`, `pages/admin/*`, các trang PT còn lại |
+| `pages/public/*`, `pages/member/*`, lịch của PT (`pages/trainer/Schedule*`)       | `pages/staff/*`, `pages/admin/*`, các trang PT còn lại                                                                                  |
 
 ## Cách viết code
 
@@ -48,6 +56,7 @@ src/
 - Mỗi trang xử lý đủ 4 trạng thái: đang tải (Skeleton), rỗng (EmptyState), lỗi (ErrorState có nút Thử lại), không có quyền (403).
 - Hành động lặp hoặc tốn tiền (tạo đơn, thanh toán, check-in, accept): khóa nút khi đang gửi (`loading`), không cho bấm hai lần.
 - Ngày giờ và tiền: dùng `formatDate`, `formatDateTime`, `formatTimeRange`, `formatVND` trong `lib/format.ts`.
+- Không tự tính ngày nghiệp vụ (ngày hết hạn gói, bảo lưu, hạn thanh toán, hạn hủy lớp, số ngày còn lại): hiện đúng giá trị BE trả về (ví dụ ngày kết thúc lấy từ `POST /orders/quote`). dayjs chỉ dùng để hiển thị, cho `DatePicker`/lịch, và đổi giá trị đã chọn thành chuỗi gửi lên (ngày thuần `YYYY-MM-DD`, thời điểm ISO 8601 `+07:00`). Xem ADR 0001, Q9.
 - Nhãn và màu trạng thái lấy từ `theme/status.ts` qua `<StatusTag kind="appointment" value={a.status} />`.
 - File component PascalCase, mỗi file một component chính, dưới khoảng 200 dòng; dài hơn thì tách.
 - Không dùng `any`. Không để `console.log` trong code commit.

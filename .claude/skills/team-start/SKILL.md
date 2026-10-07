@@ -18,7 +18,7 @@ argument-hint: "[UCxx hoặc mô tả task]"
 4. **Kiểm tra phạm vi sở hữu:** task có nằm trong thư mục người dùng được sửa không. Không thì đề xuất chuyển hoặc tạo issue.
 5. **Lập kế hoạch** tối đa 8 dòng:
    - mục tiêu;
-   - tên nhánh `feature/UCxx-<mo-ta-ngan>`;
+   - tên nhánh `<ten>w<tuan>-<mo-ta-ngan>` theo `CONTRIBUTING.md` (ví dụ `tsonw1-fe-scaffold`);
    - file sẽ tạo/sửa;
    - cách kiểm tra (lệnh, dữ liệu mẫu);
    - rủi ro hoặc giả định.

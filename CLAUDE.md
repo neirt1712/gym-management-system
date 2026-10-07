@@ -55,7 +55,7 @@ Tài liệu khác:
 - Không bịa endpoint, field, mã lỗi, màn hình hay quy tắc. Không có trong tài liệu nghĩa là chưa tồn tại.
 - Ngoài phạm vi, không tự làm: nâng cấp gói, mã giảm giá, điểm thưởng, hoàn tiền, SMS, hóa đơn điện tử, đánh giá PT, lớp lặp tuần, màn xem audit log.
 - Git theo `CONTRIBUTING.md`:
-  - nhánh `feature/UCxx-<mo-ta>`;
+  - nhánh `<ten>w<tuan>-<mo-ta>` (ví dụ `tsonw1-fe-scaffold`);
   - Conventional Commits có mã UC;
   - PR vào `develop`, 1 review, CI xanh.
 - Không bao giờ: đọc hay commit `.env`, push, `--force`, xóa hàng loạt, tắt lint hay test để cho qua.

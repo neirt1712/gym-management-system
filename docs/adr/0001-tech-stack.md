@@ -26,7 +26,7 @@ Cần một stack mà cả 4 bạn code học nhanh, đọc được code của 
 | Hợp đồng API | `docs/api/openapi.yaml` là nguồn duy nhất (contract-first); Prism chạy mock; openapi-typescript sinh kiểu cho FE | FE làm song song từ tuần 1 |
 | Xác thực | JWT access 15 phút + refresh trong cookie HttpOnly; thu hồi phiên bằng `users.token_version`; bcrypt | Không cần bảng phiên; khóa/đổi mật khẩu là hủy mọi phiên |
 | Chống trùng, tương tranh | Unique constraint + `SELECT … FOR UPDATE` trong transaction; `expectedVersion` cho lịch PT | Không cần bảng idempotency; dễ giải thích khi bảo vệ |
-| Thời gian, tiền | Lưu `timestamptz`; tính ngày nghiệp vụ theo `Asia/Ho_Chi_Minh` (date-fns-tz); tiền `Int` VND | Tránh lệch ngày, lệch số |
+| Thời gian, tiền | Lưu `timestamptz`; tính ngày nghiệp vụ theo `Asia/Ho_Chi_Minh` (date-fns-tz). BE là nơi duy nhất tính ngày nghiệp vụ và trả sẵn kết quả trong API; FE dùng dayjs (Ant Design 5 yêu cầu) chỉ để hiển thị và nhập liệu (bổ sung 07/10, Q9). Ngày thuần dạng `YYYY-MM-DD`, thời điểm ISO 8601 `+07:00`; tiền `Int` VND | Tránh lệch ngày, lệch số |
 | Đặt tên | Bảng, cột snake_case tiếng Anh; API camelCase; mã lỗi UPPER_SNAKE | Khớp code và API; báo cáo có bảng ánh xạ tiếng Việt |
 | Job nền, email | @nestjs/schedule; Nodemailer (MailHog ở dev, Gmail SMTP ở staging) | Chỉ 5 job; không cần hàng đợi |
 | Frontend | React 18 + Vite, Ant Design 5, TanStack Query, React Router | Nhiều bảng và form quản trị |
