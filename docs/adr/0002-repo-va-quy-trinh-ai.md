@@ -1,6 +1,6 @@
 # ADR 0002: Một repo, nguồn tài liệu và quy trình làm việc với Claude Code
 
-- **Trạng thái:** Đề xuất. Chốt cùng ADR 0001 trong họp Thứ Tư 07/10/2026.
+- **Trạng thái:** Đã chấp nhận ngày 08/10/2026 (Sơn chốt, cả nhóm xem qua PR; OPEN_QUESTIONS Q2).
 - **Người viết:** Trường Sơn (FE Lead), Triển (BE Lead) · **Người duyệt:** cả nhóm
 - **Lý do có ADR này:** prompt khởi tạo của FE Lead còn nhiều điểm mở. Có điểm dựa trên giả định về Claude Code chưa đúng với tài liệu hiện hành; kiểm tra tại code.claude.com ngày 06/10/2026.
 
@@ -8,11 +8,11 @@
 
 | # | Điểm còn mở | Quyết định | Vì sao |
 | --- | --- | --- | --- |
-| D1 | Một repo hay hai repo | **Một repo** `gym-management`, gồm `backend/`, `frontend/`, `docs/`, `tests/`. Câu "repo FE", "repo backend" trong phân công hiểu là khung từng thư mục | Hợp đồng API, tài liệu và code đổi cùng một PR; một `CLAUDE.md`; một CI; hợp với nhóm 5 người |
+| D1 | Một repo hay hai repo | **Một repo** `gym-management-system`, gồm `backend/`, `frontend/`, `docs/`, `tests/`. Câu "repo FE", "repo backend" trong phân công hiểu là khung từng thư mục | Hợp đồng API, tài liệu và code đổi cùng một PR; một `CLAUDE.md`; một CI; hợp với nhóm 5 người |
 | D2 | Ba file xuất nguyên tab vào `docs/source/` | **Không dùng làm nguồn.** Nguồn là `docs/spec/` (use case, ERD, API, quyết định) và `docs/plan/` (kế hoạch). Muốn lưu bản xuất nguyên văn thì để ở `docs/archive/`, chỉ để tham khảo | File nhỏ, đúng chủ đề, Claude nạp ít ngữ cảnh hơn; không có hai bản cùng nội dung có thể lệch nhau |
 | D3 | Thứ tự ưu tiên khi mâu thuẫn | Phạm vi: `docs/spec/use-cases-v3.md`, `erd-v3.md`, `api-v3.md` → Nghiệp vụ: `decisions.md` → Người, hạn: `docs/plan/*` → `docs/api/openapi.yaml` → code. Gặp mâu thuẫn thì ghi `docs/handoff/OPEN_QUESTIONS.md` và hỏi, không tự chọn | Giữ đúng ý prompt, đổi sang file thật |
 | D4 | Lệnh tắt `.claude/commands/` | Dùng **skill** (`.claude/skills/<ten>/SKILL.md`). Commands vẫn chạy nhưng đã gộp vào skill, và skill có thêm frontmatter điều khiển ai được gọi | Đúng tài liệu hiện hành |
-| D5 | Tên lệnh, chống trùng | Chung cả nhóm: `team-start`, `team-finish`, `team-handoff`, `team-api-cr`. Nhóm FE/BE: `fe-*`, `be-*`. Riêng Lead: `fe-lead-*`, `be-lead-*`. `/review-pr` thành `fe-lead-review`, `be-lead-review`; `/sync-contract` thành `fe-lead-contract` | Trùng tên thì skill cá nhân thắng skill dự án; có tiền tố thì không ai đè ai |
+| D5 | Tên lệnh, chống trùng | Chung cả nhóm: `team-start`, `team-finish`, `team-handoff`, `team-api-cr`, `team-report` (báo cáo tuần cá nhân), `team-week-close` (tổng hợp tuần, bổ sung 07/10). Nhóm FE/BE: `fe-*`, `be-*`. Riêng Lead: `fe-lead-*`, `be-lead-*`. `/review-pr` thành `fe-lead-review`, `be-lead-review`; `/sync-contract` thành `fe-lead-contract` | Trùng tên thì skill cá nhân thắng skill dự án; có tiền tố thì không ai đè ai |
 | D6 | Subagent | Một subagent chỉ đọc `spec-checker` (Read, Grep, Glob) đối chiếu code với spec và openapi; `team-finish` và skill review gọi nó | Việc rà soát chạy ngoài ngữ cảnh chính |
 | D7 | Hook tự format sau khi sửa | **Không dùng hook Claude Code.** Thay bằng Prettier khi lưu (VS Code), husky + lint-staged trước commit, và CI | Hook cần bash/jq, dễ hỏng trên máy Windows; lint-staged chạy cho mọi người kể cả không dùng Claude |
 | D8 | Quyền của Claude | `.claude/settings.json` chung: chặn đọc `.env`, cấm push và lệnh phá dữ liệu. `.claude/settings.local.json` cá nhân: giới hạn thư mục được sửa theo vai trò | Luật chung commit một lần; phạm vi cá nhân không ép lên người khác |

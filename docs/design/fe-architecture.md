@@ -40,12 +40,17 @@ component ──> hook (features/<domain>/api.ts, TanStack Query)
 | `/trainer/schedule` | Trainer | Lịch ngày/tuần/tháng, yêu cầu chờ, xác nhận buổi | UC24–UC27 | Sơn |
 | `/trainer/availability` | Trainer | Khung giờ theo mẫu tuần | UC22 | Bằng |
 | `/trainer/members`, `/trainer/members/:id` | Trainer | Hội viên phụ trách, ghi chú, kế hoạch | UC28–UC30 | Bằng |
-| `/staff/members`, `/staff/members/:id` | Staff | Tìm, thêm, sửa hội viên, mua hộ, bảo lưu | UC09, UC11, UC19, UC20 | Bằng |
+| `/staff/members`, `/staff/members/:id` | Staff, Admin (Q14) | Tìm, thêm, sửa hội viên, mua hộ, bảo lưu, đặt lịch PT hộ (tuần 5–6) | UC09, UC11, UC19, UC20, UC23 | Bằng |
 | `/staff/check-in` | Staff | Quét QR, nhập SĐT, đang tập | UC16–UC18 | Bằng |
 | `/staff/payments` | Staff | Xác nhận tiền mặt, giao dịch trong ngày | UC13, UC14 | Bằng |
 | `/admin` | Admin | Dashboard | UC39–UC41 | Bằng |
 | `/admin/packages`, `/admin/users`, `/admin/trainers`, `/admin/classes`, `/admin/payments`, `/admin/notifications` | Admin | Quản trị | UC08, UC13, UC14, UC22, UC31–UC36, UC38, UC43 | Bằng |
 | `/notifications` | Mọi vai trò | Trung tâm thông báo | UC42 | Bằng |
+
+Dùng chung màn giữa các vai trò (Q14, chốt 07/10):
+- Admin có mục menu "Hội viên" trỏ tới `/staff/members` (UC19 xem/tìm, UC11 bảo lưu); route này cho phép cả `STAFF` và `ADMIN`.
+- Staff đặt lịch PT hộ hội viên bằng nút trong `/staff/members/:id` (UC23).
+- Danh sách đăng ký lớp (UC38) nằm trong chi tiết lớp: PT mở từ `/trainer/schedule`; Staff xem trang lớp dùng chung ở chế độ chỉ đọc (route chốt khi Bằng vẽ Figma, tuần 7).
 
 Route guard: chưa đăng nhập thì về `/login?next=…`; sai vai trò thì về trang 403. Quyền chi tiết trên từng hành động theo `allowedActions` do BE trả. `next` chỉ nhận đường dẫn nội bộ (bắt đầu bằng `/`, không phải `//`).
 
