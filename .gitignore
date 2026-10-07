@@ -1,2 +1,5 @@
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Thư viện của công cụ trong tools/
+tools/*/node_modules/
