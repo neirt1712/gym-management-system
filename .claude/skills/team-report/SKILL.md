@@ -24,4 +24,4 @@ Hướng dẫn chung và bảng tên viết tắt: `docs/reports/README.md`. M�
 4. **Hỏi người dùng** tối đa 5 câu để lấp chỗ trống (lý do trễ, việc ngoài kế hoạch, vướng mắc, bài học). Người dùng sửa xong mới sang bước 5.
 5. **Xuất Word:** chạy `node tools/report-docx/md2docx.mjs docs/reports/tuan-NN/<ten>.md`. Lỗi thiếu thư viện thì chạy `npm install` trong thư mục `tools/report-docx` (hỏi trước) rồi chạy lại. Báo đường dẫn file `.docx`.
 6. **Không sửa** kế hoạch, STATUS hay OPEN_QUESTIONS trong skill này; đề xuất thì ghi ở mục 7. Câu hỏi mới thật sự chặn việc thì nhắc người dùng thêm vào `OPEN_QUESTIONS.md`.
-7. **Soạn commit** (chỉ commit khi người dùng đồng ý, không push): nhánh `<ten>w<N>-report`, message `docs(report): tuần N báo cáo của <ten>`, gồm file `.md` và `.docx`. Nhắc người dùng mở PR vào `develop` và báo Huy Trường.
+7. **Soạn commit** (chỉ commit khi người dùng đồng ý, không push): nhánh `<ten>w<N>-report`, message `docs(report): tuần N báo cáo của <ten>`, gồm file `.md` và `.docx`. Nhắc người dùng mở PR vào `develop` và báo Sơn (người chốt tuần).
