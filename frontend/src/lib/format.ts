@@ -29,4 +29,5 @@ export const formatTimeRange = (start: string, end: string): string => {
 };
 
 /** (7, 12) → "Còn 7/12 buổi" */
-export const formatSessionsLeft = (remaining: number, total: number): string => `Còn ${remaining}/${total} buổi`;
+export const formatSessionsLeft = (remaining: number, total: number): string =>
+  `Còn ${remaining}/${total} buổi`;
