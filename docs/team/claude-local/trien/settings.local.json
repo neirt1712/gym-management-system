@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git switch *)",
+      "Bash(git fetch *)",
+      "Bash(node tools/report-docx/*)",
+      "Edit(/docs/handoff/**)",
+      "Edit(/docs/reports/**)",
+      "Bash(npm run *)",
+      "Bash(npx prisma generate*)",
+      "Bash(npx @redocly/cli lint *)",
+      "Edit(/backend/src/**)",
+      "Edit(/docs/api/openapi.yaml)",
+      "Edit(/docs/api/CHANGELOG.md)",
+      "Edit(/docs/adr/**)",
+      "Edit(/docs/plan/be-plan.md)",
+      "Edit(/docs/design/**)",
+      "Edit(/CONTRIBUTING.md)"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(npm install *)",
+      "Edit(/backend/prisma/**)",
+      "Edit(/docker-compose.yml)",
+      "Edit(/.github/workflows/**)",
+      "Edit(/docs/api/error-codes.md)",
+      "Edit(/docs/design/fe-*)",
+      "Bash(npx prisma migrate *)"
+    ],
+    "deny": [
+      "Edit(/frontend/**)",
+      "Edit(/docs/spec/**)"
+    ]
+  }
+}

@@ -4,7 +4,7 @@ File này giữ cho hai người code ra cùng một kiểu. Quyết định cô
 
 ## Stack
 
-Node 20 LTS, NestJS 10, TypeScript strict, Prisma 5, PostgreSQL 16 (btree_gist, unaccent, pg_trgm), class-validator, @nestjs/schedule, @nestjs/throttler, Nodemailer, date-fns + date-fns-tz, exceljs. Test: Jest + Supertest + Testcontainers.
+Node 20 LTS, NestJS 10, TypeScript strict, Prisma 5, PostgreSQL 15+ (btree_gist, unaccent, pg_trgm), class-validator, @nestjs/schedule, @nestjs/throttler, Nodemailer, date-fns + date-fns-tz, exceljs. Test: Jest + Supertest + Testcontainers.
 Không thêm thư viện mới khi chưa hỏi BE Lead (Triển).
 
 ## Lệnh

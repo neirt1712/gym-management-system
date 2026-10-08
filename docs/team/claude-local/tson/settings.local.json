@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx vitest *)",
+      "Bash(npx playwright test *)",
+      "Bash(npx openapi-typescript *)",
+      "Bash(npx prism mock *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git switch *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)",
+      "Edit(/frontend/**)",
+      "Edit(/docs/handoff/**)",
+      "Edit(/docs/design/fe-architecture.md)",
+      "Edit(/docs/plan/fe-plan.md)",
+      "Edit(/CONTRIBUTING.md)",
+      "Edit(/docs/adr/0002-*)",
+      "Bash(git add *)",
+      "Edit(/docs/reports/**)",
+      "Bash(git fetch *)",
+      "Bash(node tools/report-docx/*)"
+    ],
+    "deny": [
+      "Edit(/backend/**)",
+      "Edit(/docs/spec/**)",
+      "Edit(/docs/api/**)",
+      "Edit(/frontend/src/api/schema.d.ts)"
+    ],
+    "ask": [
+      "Edit(/frontend/src/theme/**)",
+      "Edit(/frontend/src/components/**)",
+      "Bash(git commit *)",
+      "Bash(npm install *)"
+    ]
+  }
+}

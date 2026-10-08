@@ -1,0 +1,48 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git switch *)",
+      "Bash(git fetch *)",
+      "Bash(node tools/report-docx/*)",
+      "Edit(/docs/handoff/**)",
+      "Edit(/docs/reports/**)",
+      "Bash(npm run *)",
+      "Bash(npx vitest *)",
+      "Bash(npx playwright test *)",
+      "Edit(/frontend/src/components/**)",
+      "Edit(/frontend/src/features/packages-admin/**)",
+      "Edit(/frontend/src/features/users-admin/**)",
+      "Edit(/frontend/src/features/staff-counter/**)",
+      "Edit(/frontend/src/features/check-in/**)",
+      "Edit(/frontend/src/features/trainer-members/**)",
+      "Edit(/frontend/src/features/availability/**)",
+      "Edit(/frontend/src/features/classes-admin/**)",
+      "Edit(/frontend/src/features/notifications/**)",
+      "Edit(/frontend/src/features/reports/**)",
+      "Edit(/frontend/src/pages/staff/**)",
+      "Edit(/frontend/src/pages/admin/**)",
+      "Edit(/frontend/src/pages/trainer/**)",
+      "Edit(/frontend/src/pages/public/Package*)"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(npm install *)",
+      "Edit(/frontend/src/theme/**)",
+      "Edit(/frontend/src/app/**)",
+      "Edit(/frontend/src/api/**)",
+      "Edit(/frontend/src/lib/**)",
+      "Edit(/frontend/src/pages/trainer/Schedule*)",
+      "Edit(/frontend/package.json)"
+    ],
+    "deny": [
+      "Edit(/backend/**)",
+      "Edit(/docs/spec/**)",
+      "Edit(/docs/api/**)",
+      "Edit(/frontend/src/api/schema.d.ts)"
+    ]
+  }
+}
