@@ -1,0 +1,2888 @@
+openapi: 3.1.0
+
+# =============================================================================
+# HỢP ĐỒNG API — HỆ THỐNG QUẢN LÝ PHÒNG GYM
+# Chủ file: Triển (BE Lead). Đổi gì cũng ghi vào docs/api/CHANGELOG.md và báo Sơn.
+# Thứ tự trong file:
+#   1. info, servers, tags        — giới thiệu, quy ước chung (đọc trước)
+#   2. paths                      — các endpoint, xếp theo nhóm giống docs/spec/api-v3.md
+#   3. components                 — schema, tham số, response lỗi, ví dụ dùng chung
+# Xem dạng trang web: npx @redocly/cli preview-docs docs/api/openapi.yaml
+# =============================================================================
+
+info:
+  title: Gym Management API
+  version: 0.1.0
+  description: |
+    Hợp đồng API giữa backend (NestJS) và frontend (React) của hệ thống quản lý phòng gym.
+
+    **Phiên bản 0.1** gồm 8 nhóm: Xác thực, Hồ sơ, Gói, Đơn hàng, Thanh toán, Check-in,
+    Hội viên, Tài khoản (và `/health`). Các nhóm còn lại (Gói hội viên, PT, Lịch PT,
+    Theo dõi tập, Lớp học, Báo cáo, Thông báo) bổ sung ở bản đủ 74 API (hạn 16/10).
+
+    Nguồn phạm vi: `docs/spec/api-v3.md`, `use-cases-v3.md`, `erd-v3.md`, `decisions.md`.
+    Mã lỗi: `docs/api/error-codes.md`. Lịch sử thay đổi: `docs/api/CHANGELOG.md`.
+
+    ## Quy ước chung
+
+    | Chủ đề | Quy ước |
+    | --- | --- |
+    | Đường dẫn gốc | `/api/v1` |
+    | Tên field | camelCase (`fullName`, `startsOn`) |
+    | Tiền | Số nguyên VND, không có phần lẻ (`price: 500000`) |
+    | Ngày thuần | `YYYY-MM-DD`, theo giờ Việt Nam (`startsOn: "2026-10-08"`) |
+    | Thời điểm | ISO 8601 có múi giờ `+07:00` (`"2026-10-08T09:30:00+07:00"`) |
+    | Mã định danh | UUID |
+    | Danh sách | Luôn trả `{ data: [...], meta: { page, pageSize, total, totalPages } }`. Tham số `page` (từ 1), `pageSize` (mặc định 20, tối đa 100) |
+    | Field không có giá trị | Trả `null`, không bỏ field |
+    | Ngày nghiệp vụ | BE tính sẵn (ngày kết thúc gói, hạn thanh toán…). FE chỉ hiển thị, không tự cộng trừ ngày |
+
+    ## Đăng nhập và phiên
+
+    1. `POST /auth/login` trả `accessToken` (hạn 15 phút) trong body và đặt cookie
+       `refresh_token` (HttpOnly, SameSite=Lax, path `/api/v1/auth`).
+    2. FE giữ `accessToken` trong bộ nhớ, gửi kèm mọi request:
+       `Authorization: Bearer <accessToken>`.
+    3. Gặp `401 UNAUTHENTICATED`: FE gọi `POST /auth/refresh` một lần (trình duyệt tự gửi cookie),
+       nhận token mới rồi gửi lại request. Refresh lỗi thì về trang đăng nhập.
+    4. Khóa tài khoản hoặc đổi mật khẩu sẽ làm mọi phiên cũ hết hiệu lực (`users.token_version`).
+
+    ## Vai trò
+
+    `ADMIN` (quản trị), `STAFF` (nhân viên quầy), `TRAINER` (PT), `MEMBER` (khách hàng/hội viên).
+    Mỗi endpoint ghi rõ ở dòng **Quyền**. "Của mình" nghĩa là BE kiểm tra quyền sở hữu trên mọi
+    `{id}`: gọi vào dữ liệu của người khác nhận `404 NOT_FOUND` (không tiết lộ là có tồn tại).
+
+    ## Lỗi
+
+    Mọi lỗi có cùng dạng:
+
+    ```json
+    { "error": { "code": "PHONE_DUPLICATED", "message": "...", "details": null, "requestId": "..." } }
+    ```
+
+    - FE xử lý theo `error.code`, **không** dựa vào `message` (message chỉ cho dev đọc).
+    - Câu hiển thị cho người dùng lấy từ cột "Thông điệp FE" trong `docs/api/error-codes.md`.
+    - `VALIDATION_ERROR` có `details` là danh sách `{ field, messages }` để tô đỏ ô nhập.
+    - Mỗi response (cả thành công) có header `X-Request-Id`, trùng với `error.requestId`.
+
+    ## Cách đọc mỗi endpoint
+
+    Mô tả mỗi endpoint mở đầu bằng **Quyền** và **UC**, sau đó là quy tắc nghiệp vụ.
+    Phần Responses liệt kê đủ mã lỗi nghiệp vụ có thể gặp (lỗi chung 400/401/403 dùng lại từ
+    `components/responses`).
+  contact:
+    name: Triển (BE Lead)
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Backend chạy trên máy (npm run start:dev)
+  - url: http://127.0.0.1:4010
+    description: Mock Prism cho FE (npx prism mock docs/api/openapi.yaml)
+
+# Mặc định mọi endpoint cần đăng nhập (Bearer). Endpoint công khai ghi `security: []`.
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Xác thực
+    description: Đăng ký, đăng nhập, giữ phiên, quên và đổi mật khẩu (UC01–UC04, UC06).
+  - name: Hồ sơ
+    description: Hồ sơ của người đang đăng nhập, ảnh đại diện, mã QR (UC05, UC15).
+  - name: Gói
+    description: Gói tập để bán. Khách xem không cần đăng nhập; Admin thêm, sửa, ngừng bán (UC07, UC08).
+  - name: Đơn hàng
+    description: |
+      Mua gói hoặc gia hạn (UC09, UC14). Đơn **chụp lại điều khoản gói** lúc tạo; Admin sửa gói sau đó
+      không ảnh hưởng đơn đã có. Gói hội viên chỉ sinh ra khi đơn có thanh toán SUCCESS.
+
+      Trạng thái đơn: `PENDING` (chờ trả) → `PAID` | `CANCELLED` | `EXPIRED` (quá hạn: VNPay 30 phút,
+      tiền mặt hết ngày).
+  - name: Thanh toán
+    description: |
+      VNPay sandbox và tiền mặt (UC12–UC14). Trạng thái: `PENDING` → `SUCCESS` | `FAILED`.
+
+      **Luồng VNPay:** tạo payment → FE chuyển sang `checkoutUrl` → VNPay gọi IPN về BE → BE kích hoạt gói →
+      VNPay đưa người dùng về trang kết quả của FE. **FE không tin tham số trên return URL**; luôn gọi
+      `GET /orders/{id}` (lặp mỗi 2–3 giây, tối đa khoảng 1 phút) để biết đơn đã `PAID` chưa.
+
+      **Luồng tiền mặt:** tạo payment CASH → Staff nhận tiền → `POST /payments/{id}/confirm-cash`.
+  - name: Check-in
+    description: Ra vào phòng tập (UC16–UC18). Check-in không trừ buổi PT. Mỗi hội viên chỉ có 1 lượt chưa check-out; job 23:59 tự đóng lượt còn mở.
+  - name: Hội viên
+    description: |
+      Staff, Admin tìm và quản lý hội viên tại quầy (UC19, UC20). PT xem hội viên mình phụ trách (UC28).
+
+      "Khách hàng" và "hội viên" cùng là tài khoản MEMBER; hội viên là người có ít nhất 1 gói ACTIVE.
+      API trả sẵn `hasActiveSubscription` để FE phân biệt, không lưu thành cột.
+  - name: Tài khoản
+    description: Admin quản lý tài khoản Staff, PT, Admin (UC31–UC35).
+  - name: Vận hành
+    description: Kiểm tra server.
+
+# =============================================================================
+# PATHS
+# =============================================================================
+paths:
+
+  # ---------------------------------------------------------------------------
+  # XÁC THỰC (7)
+  # ---------------------------------------------------------------------------
+  /auth/register:
+    post:
+      tags: [Xác thực]
+      operationId: register
+      summary: Đăng ký tài khoản khách hàng
+      description: |
+        **Quyền:** Public · **UC01**
+
+        - Tạo tài khoản vai trò MEMBER kèm hồ sơ hội viên (mã hội viên, mã QR).
+        - Số điện thoại là định danh đăng nhập, bắt buộc. Email không bắt buộc (Q15).
+        - Thành công thì đăng nhập luôn: trả phiên như `POST /auth/login` và đặt cookie refresh.
+        - Nếu SĐT trùng với hồ sơ Staff đã tạo tại quầy mà **chưa kích hoạt**: trả `409 ACTIVATION_REQUIRED`.
+          FE hướng dẫn kích hoạt: có email thì qua "Quên mật khẩu", không có email thì đến quầy.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+            example:
+              fullName: Nguyễn Văn An
+              phone: '0901234567'
+              email: an.nguyen@example.com
+              dob: '1998-05-20'
+              password: matkhau123
+      responses:
+        '201':
+          description: Đã tạo tài khoản và đăng nhập.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthSession' }
+              examples:
+                SessionMember: { $ref: '#/components/examples/SessionMember' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: SĐT hoặc email đã được dùng, hoặc SĐT thuộc hồ sơ tại quầy chưa kích hoạt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                PHONE_DUPLICATED: { $ref: '#/components/examples/ErrPhoneDuplicated' }
+                EMAIL_DUPLICATED: { $ref: '#/components/examples/ErrEmailDuplicated' }
+                ACTIVATION_REQUIRED: { $ref: '#/components/examples/ErrActivationRequired' }
+
+  /auth/login:
+    post:
+      tags: [Xác thực]
+      operationId: login
+      summary: Đăng nhập bằng số điện thoại
+      description: |
+        **Quyền:** Public · **UC02**
+
+        - Chỉ nhận **số điện thoại** + mật khẩu (Q12).
+        - Thành công: trả `accessToken` (15 phút) trong body, đặt cookie `refresh_token`.
+        - Sai 5 lần liên tiếp: tạm khóa, trả `429 ACCOUNT_TEMPORARILY_LOCKED` kèm
+          `details.retryAfterSeconds`. Đăng nhập đúng thì đếm lại từ 0.
+        - Tài khoản bị Admin khóa: `403 ACCOUNT_LOCKED`.
+        - Tài khoản tạo tại quầy chưa kích hoạt (chưa có mật khẩu): `401 INVALID_CREDENTIALS`
+          như sai mật khẩu.
+
+        **Ví dụ cho mock (Q8):** 4 example `admin`, `staff`, `trainer`, `member`. Với Prism chọn
+        example bằng header `Prefer: example=staff`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            examples:
+              admin:
+                summary: Đăng nhập Admin
+                value: { phone: '0900000001', password: matkhau123 }
+              staff:
+                summary: Đăng nhập Staff
+                value: { phone: '0900000002', password: matkhau123 }
+              trainer:
+                summary: Đăng nhập PT
+                value: { phone: '0900000003', password: matkhau123 }
+              member:
+                summary: Đăng nhập hội viên
+                value: { phone: '0901234567', password: matkhau123 }
+      responses:
+        '200':
+          description: Đăng nhập thành công.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthSession' }
+              examples:
+                member: { $ref: '#/components/examples/SessionMember' }
+                admin: { $ref: '#/components/examples/SessionAdmin' }
+                staff: { $ref: '#/components/examples/SessionStaff' }
+                trainer: { $ref: '#/components/examples/SessionTrainer' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Sai số điện thoại hoặc mật khẩu.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                INVALID_CREDENTIALS: { $ref: '#/components/examples/ErrInvalidCredentials' }
+        '403':
+          description: Tài khoản đã bị Admin khóa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                ACCOUNT_LOCKED: { $ref: '#/components/examples/ErrAccountLocked' }
+        '429':
+          description: Đăng nhập sai quá 5 lần, tạm khóa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                ACCOUNT_TEMPORARILY_LOCKED: { $ref: '#/components/examples/ErrAccountTemporarilyLocked' }
+
+  /auth/refresh:
+    post:
+      tags: [Xác thực]
+      operationId: refreshSession
+      summary: Lấy access token mới từ cookie refresh
+      description: |
+        **Quyền:** Public (dựa vào cookie) · **UC02**
+
+        - Không có body. Trình duyệt tự gửi cookie `refresh_token`; FE gọi với `credentials: 'include'`.
+        - Thành công: trả phiên mới và đặt lại cookie (đổi refresh token mỗi lần gọi).
+        - Cookie thiếu, hết hạn, hoặc phiên đã bị thu hồi (khóa tài khoản, đổi mật khẩu): `401 UNAUTHENTICATED`.
+        - FE gọi khi tải lại trang và khi một request gặp 401.
+      security:
+        - refreshCookie: []
+      responses:
+        '200':
+          description: Phiên mới.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthSession' }
+              examples:
+                SessionMember: { $ref: '#/components/examples/SessionMember' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/logout:
+    post:
+      tags: [Xác thực]
+      operationId: logout
+      summary: Đăng xuất
+      description: |
+        **Quyền:** Đã đăng nhập · **UC03**
+
+        Xóa cookie refresh trên thiết bị này (ADR 0001: không thu hồi riêng từng thiết bị).
+        FE xóa access token trong bộ nhớ rồi về trang đăng nhập.
+      responses:
+        '204':
+          description: Đã đăng xuất.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/ClearRefreshCookie' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/forgot-password:
+    post:
+      tags: [Xác thực]
+      operationId: forgotPassword
+      summary: Quên mật khẩu hoặc kích hoạt tài khoản tạo tại quầy
+      description: |
+        **Quyền:** Public · **UC04**
+
+        - Người dùng nhập số điện thoại. Nếu tài khoản có email, BE gửi link đặt mật khẩu tới email đó,
+          hạn 30 phút (quyết định 1). Link dạng `<FE>/reset-password?token=...`.
+        - Dùng chung cho **kích hoạt** tài khoản Staff tạo tại quầy (chưa có mật khẩu).
+        - Để không lộ SĐT nào đã đăng ký, BE luôn trả `202` khi SĐT không tồn tại.
+        - Giới hạn tần suất: gọi quá nhiều lần trả `429 RATE_LIMITED`.
+
+        **Chưa chốt (Q16, Q17):** tài khoản **không có email** (Q15) cần mã lỗi riêng để FE hiện
+        "Liên hệ quầy để đặt lại mật khẩu". Nhưng trả mã riêng sẽ cho người lạ biết SĐT đó đã đăng ký,
+        ngược với quy tắc "luôn trả 202" ở trên. Chờ chốt; trong lúc chờ, BE trả `202`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ForgotPasswordRequest' }
+            example: { phone: '0901234567' }
+      responses:
+        '202':
+          description: Đã nhận yêu cầu. Nếu tài khoản có email, link đặt mật khẩu đã được gửi.
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /auth/reset-password:
+    post:
+      tags: [Xác thực]
+      operationId: resetPassword
+      summary: Đặt mật khẩu mới bằng link trong email
+      description: |
+        **Quyền:** Public · **UC04**
+
+        - `token` lấy từ link email. Mỗi token dùng một lần, hạn 30 phút.
+        - Thành công: đặt mật khẩu mới, kích hoạt tài khoản nếu chưa kích hoạt, thu hồi mọi phiên cũ.
+          FE chuyển về trang đăng nhập.
+        - Token sai, hết hạn hoặc đã dùng: `400 TOKEN_EXPIRED`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResetPasswordRequest' }
+            example: { token: 9f8c2d1e7b6a4f3e9d8c7b6a5f4e3d2c, newPassword: matkhaumoi456 }
+      responses:
+        '204':
+          description: Đã đặt mật khẩu mới.
+        '400':
+          description: Dữ liệu sai, hoặc link đã hết hạn / đã dùng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                TOKEN_EXPIRED: { $ref: '#/components/examples/ErrTokenExpired' }
+                VALIDATION_ERROR: { $ref: '#/components/examples/ErrValidation' }
+
+  /auth/change-password:
+    post:
+      tags: [Xác thực]
+      operationId: changePassword
+      summary: Đổi mật khẩu
+      description: |
+        **Quyền:** Đã đăng nhập · **UC06**
+
+        - Cần nhập đúng mật khẩu hiện tại.
+        - Mật khẩu hiện tại sai trả `400 VALIDATION_ERROR` với `details[0].field = "currentPassword"`
+          (không dùng 401 để FE không nhầm là hết phiên và gọi refresh).
+        - Thành công: thu hồi mọi phiên ở thiết bị khác; thiết bị hiện tại nhận cookie refresh mới
+          và access token mới trong body nên không bị đăng xuất.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+            example: { currentPassword: matkhau123, newPassword: matkhaumoi456 }
+      responses:
+        '200':
+          description: Đã đổi mật khẩu, trả phiên mới cho thiết bị này.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthSession' }
+              examples:
+                SessionMember: { $ref: '#/components/examples/SessionMember' }
+        '400':
+          description: Dữ liệu sai hoặc mật khẩu hiện tại không đúng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                wrongCurrentPassword: { $ref: '#/components/examples/ErrWrongCurrentPassword' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  # ---------------------------------------------------------------------------
+  # HỒ SƠ (3 + 1 tạo lại QR theo Q6)
+  # ---------------------------------------------------------------------------
+  /me:
+    get:
+      tags: [Hồ sơ]
+      operationId: getMe
+      summary: Xem hồ sơ của tôi
+      description: |
+        **Quyền:** Đã đăng nhập · **UC05, UC15**
+
+        Trả thông tin chung của tài khoản và phần riêng theo vai trò:
+        - MEMBER: `member` (mã hội viên, `qrToken` để FE vẽ mã QR, có gói ACTIVE hay chưa).
+        - TRAINER: `trainer` (chuyên môn, giới thiệu, số năm kinh nghiệm).
+        - STAFF: `shift` (ca làm).
+        Phần không thuộc vai trò trả `null`.
+      responses:
+        '200':
+          description: Hồ sơ của tôi.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+              examples:
+                member: { $ref: '#/components/examples/MeMember' }
+                trainer: { $ref: '#/components/examples/MeTrainer' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    patch:
+      tags: [Hồ sơ]
+      operationId: updateMe
+      summary: Sửa hồ sơ của tôi
+      description: |
+        **Quyền:** Đã đăng nhập · **UC05**
+
+        - Chỉ gửi field muốn đổi. Gửi `email: null` để xóa email.
+        - Không đổi được số điện thoại (định danh đăng nhập), vai trò, trạng thái ở đây.
+          Muốn đổi SĐT thì nhờ Staff (`PATCH /members/{id}`) hoặc Admin (`PATCH /users/{id}`).
+        - `avatarUrl` lấy từ kết quả `POST /uploads/avatar`.
+        - Nhóm field `trainer` chỉ PT được gửi; vai trò khác gửi thì `400 VALIDATION_ERROR`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMeRequest' }
+            example: { fullName: Nguyễn Văn An, email: an.moi@example.com, dob: '1998-05-20' }
+      responses:
+        '200':
+          description: Hồ sơ sau khi sửa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+              examples:
+                MeMember: { $ref: '#/components/examples/MeMember' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409':
+          description: Email đã được tài khoản khác dùng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                EMAIL_DUPLICATED: { $ref: '#/components/examples/ErrEmailDuplicated' }
+
+  /me/qr-token/regenerate:
+    post:
+      tags: [Hồ sơ]
+      operationId: regenerateMyQrToken
+      summary: Tạo lại mã QR khi bị lộ
+      description: |
+        **Quyền:** MEMBER · **UC15** · Quyết định 13, Q6
+
+        - Mã QR cố định; chỉ đổi khi hội viên bấm "Tạo lại mã QR". Mã cũ hết hiệu lực ngay
+          (quét mã cũ ở quầy nhận `INVALID_QR`).
+        - **Chờ cập nhật:** endpoint này chưa có trong `docs/spec/api-v3.md` (Huy Trường bổ sung theo Q6).
+      x-spec-status: chờ api-v3 (Q6)
+      responses:
+        '200':
+          description: Mã QR mới.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QrTokenResponse' }
+              example: { qrToken: QR-2f7c9a1b8e6d4c3a }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /uploads/avatar:
+    post:
+      tags: [Hồ sơ]
+      operationId: uploadAvatar
+      summary: Tải ảnh đại diện
+      description: |
+        **Quyền:** Đã đăng nhập · **UC05**
+
+        - Gửi `multipart/form-data`, field `file`. Chỉ nhận JPEG hoặc PNG.
+        - Trả `avatarUrl`; FE gửi tiếp `PATCH /me` với `avatarUrl` này để lưu vào hồ sơ.
+        - Sai định dạng: `422 INVALID_FILE`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Ảnh JPEG hoặc PNG.
+      responses:
+        '201':
+          description: Đã tải ảnh lên.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvatarUploadResponse' }
+              example: { avatarUrl: /uploads/avatars/44444444-4444-4444-8444-444444444444.jpg }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422':
+          description: File không phải JPEG/PNG.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                INVALID_FILE: { $ref: '#/components/examples/ErrInvalidFile' }
+
+  # ---------------------------------------------------------------------------
+  # GÓI (4)
+  # ---------------------------------------------------------------------------
+  /packages:
+    get:
+      tags: [Gói]
+      operationId: listPackages
+      summary: Xem, tìm, lọc gói
+      description: |
+        **Quyền:** Public · **UC07**
+
+        - Khách và hội viên chỉ thấy gói `ACTIVE` (đang bán). Admin thấy cả gói ngừng bán và lọc
+          được theo `status`.
+        - Tìm `q` theo tên gói, không phân biệt dấu và hoa thường.
+        - Sắp xếp mặc định: giá tăng dần.
+        - So sánh gói (UC07) là việc của FE: chọn nhiều gói từ danh sách rồi hiển thị cạnh nhau.
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          description: Từ khóa trong tên gói.
+          schema: { type: string, maxLength: 100 }
+        - name: type
+          in: query
+          description: Loại gói.
+          schema: { $ref: '#/components/schemas/PackageType' }
+        - name: minPrice
+          in: query
+          description: Giá từ (VND).
+          schema: { type: integer, minimum: 0 }
+        - name: maxPrice
+          in: query
+          description: Giá đến (VND).
+          schema: { type: integer, minimum: 0 }
+        - name: durationUnit
+          in: query
+          description: Đơn vị thời hạn. Dùng cùng `durationValue` để lọc đúng thời hạn, ví dụ 3 tháng.
+          schema: { $ref: '#/components/schemas/DurationUnit' }
+        - name: durationValue
+          in: query
+          description: Số đơn vị thời hạn.
+          schema: { type: integer, minimum: 1 }
+        - name: status
+          in: query
+          description: Chỉ Admin dùng được. Không gửi thì Admin thấy mọi trạng thái.
+          schema: { $ref: '#/components/schemas/PackageStatus' }
+      responses:
+        '200':
+          description: Danh sách gói.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Package' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                PackageGymList: { $ref: '#/components/examples/PackageGymList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Gói]
+      operationId: createPackage
+      summary: Thêm gói
+      description: |
+        **Quyền:** ADMIN · **UC08**
+
+        - Gói `GYM`: `totalSessions` và `sessionMinutes` để `null`.
+        - Gói `PT`: bắt buộc `totalSessions` và `sessionMinutes`.
+        - Gói mới có trạng thái `ACTIVE`. Ghi `audit_logs`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePackageRequest' }
+            example:
+              name: PT 12 buổi
+              description: 12 buổi tập 1 kèm 1 với PT trong 2 tháng.
+              type: PT
+              price: 6000000
+              durationValue: 2
+              durationUnit: MONTH
+              totalSessions: 12
+              sessionMinutes: 60
+              includesClass: true
+              benefits: [Tập 1 kèm 1, Đo InBody mỗi tháng, Vào lớp nhóm]
+      responses:
+        '201':
+          description: Đã tạo gói.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Package' }
+              examples:
+                PackagePt: { $ref: '#/components/examples/PackagePt' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /packages/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Gói]
+      operationId: getPackage
+      summary: Xem chi tiết gói
+      description: |
+        **Quyền:** Public · **UC07**
+
+        Khách xem được cả gói đã ngừng bán (để mở lại link cũ), nhưng không mua được.
+      security:
+        - {}
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Chi tiết gói.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Package' }
+              examples:
+                PackageGym: { $ref: '#/components/examples/PackageGym' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Gói]
+      operationId: updatePackage
+      summary: Sửa gói hoặc ngừng bán
+      description: |
+        **Quyền:** ADMIN · **UC08**
+
+        - Chỉ gửi field muốn đổi. Ngừng bán: `status: INACTIVE`; bán lại: `status: ACTIVE`.
+        - Không đổi được `type`.
+        - Đổi giá, thời hạn, số buổi **không ảnh hưởng** đơn và gói hội viên đã có (đơn chụp điều khoản).
+        - Ghi `audit_logs` với giá trị trước và sau.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePackageRequest' }
+            example: { price: 1300000, benefits: [Tập không giới hạn, Tủ đồ miễn phí] }
+      responses:
+        '200':
+          description: Gói sau khi sửa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Package' }
+              examples:
+                PackageGym: { $ref: '#/components/examples/PackageGym' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------------------
+  # ĐƠN HÀNG (5)
+  # ---------------------------------------------------------------------------
+  /orders/quote:
+    post:
+      tags: [Đơn hàng]
+      operationId: quoteOrder
+      summary: Báo giá trước khi mua
+      description: |
+        **Quyền:** MEMBER (cho mình), STAFF, ADMIN (mua hộ, phải gửi `memberId`) · **UC09**
+
+        - Không tạo gì trong DB; chỉ tính `total` và `endsOn` để FE hiện màn xác nhận.
+        - Body giống `POST /orders`. Lỗi trả về cũng giống `POST /orders` (trừ `PENDING_ORDER_EXISTS`).
+        - Cách tính ngày (quyết định 12): `endsOn = startsOn + thời hạn − 1 ngày`, tính cả ngày `endsOn`.
+          Ví dụ 31/01 + 1 tháng → kết thúc 27/02.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderRequest' }
+            example: { packageId: 77777777-7777-4777-8777-777777777777, startsOn: '2026-10-10' }
+      responses:
+        '200':
+          description: Báo giá.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderQuote' }
+              example:
+                packageId: 77777777-7777-4777-8777-777777777777
+                packageName: Gym 1 tháng
+                type: GYM
+                price: 500000
+                total: 500000
+                durationValue: 1
+                durationUnit: MONTH
+                totalSessions: null
+                sessionMinutes: null
+                includesClass: false
+                startsOn: '2026-10-10'
+                endsOn: '2026-11-09'
+                renewalOf: null
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    x-note: Báo giá dùng POST vì có body; không thay đổi dữ liệu.
+
+  /orders:
+    post:
+      tags: [Đơn hàng]
+      operationId: createOrder
+      summary: Tạo đơn mua hoặc gia hạn gói
+      description: |
+        **Quyền:** MEMBER (cho mình), STAFF, ADMIN (mua hộ, phải gửi `memberId`) · **UC09**
+
+        - Tạo đơn `PENDING`, chụp lại điều khoản gói (giá, thời hạn, số buổi, phút/buổi, quyền vào lớp).
+        - **Gia hạn:** gửi `renewalOf` là id gói hội viên đang có. Không gửi `startsOn` thì BE lấy
+          ngày sau `endsOn` của gói cũ. Mua mới không gửi `startsOn` thì lấy hôm nay.
+        - `startsOn` không được trước hôm nay.
+        - Gói đã ngừng bán: `400 VALIDATION_ERROR` (`details[0].field = "packageId"`).
+        - Đã có đơn `PENDING` cùng gói: `409 PENDING_ORDER_EXISTS` kèm `details.orderId`;
+          FE mở lại đơn đó thay vì tạo mới.
+        - `expiresAt` là hạn thanh toán, BE tính lúc chọn phương thức (VNPay 30 phút, tiền mặt hết ngày);
+          trước khi chọn là hết ngày.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderRequest' }
+            examples:
+              memberSelf:
+                summary: Hội viên tự mua
+                value: { packageId: 77777777-7777-4777-8777-777777777777, startsOn: '2026-10-10' }
+              staffForMember:
+                summary: Staff mua hộ tại quầy
+                value:
+                  packageId: 77777777-7777-4777-8777-777777777777
+                  memberId: 55555555-5555-4555-8555-555555555555
+              renewal:
+                summary: Gia hạn gói đang có
+                value:
+                  packageId: 77777777-7777-4777-8777-777777777777
+                  renewalOf: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+      responses:
+        '201':
+          description: Đã tạo đơn.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+              examples:
+                OrderPending: { $ref: '#/components/examples/OrderPending' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Đã có đơn chờ thanh toán cho gói này.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                PENDING_ORDER_EXISTS: { $ref: '#/components/examples/ErrPendingOrderExists' }
+    get:
+      tags: [Đơn hàng]
+      operationId: listOrders
+      summary: Lịch sử đơn
+      description: |
+        **Quyền:** MEMBER (đơn của mình), STAFF, ADMIN · **UC14**
+
+        - MEMBER: luôn chỉ thấy đơn của mình, `memberId` bị bỏ qua.
+        - Sắp xếp: mới nhất trước.
+        - **Chưa chốt (Q17):** STAFF có bị giới hạn đơn trong ngày như `GET /payments` (quyết định 19) không.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/MemberIdQuery'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/OrderStatus' }
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+      responses:
+        '200':
+          description: Danh sách đơn.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Order' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                OrderPaidList: { $ref: '#/components/examples/OrderPaidList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /orders/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Đơn hàng]
+      operationId: getOrder
+      summary: Xem chi tiết đơn (kèm biên lai khi đã trả)
+      description: |
+        **Quyền:** MEMBER (của mình), STAFF, ADMIN · **UC14, UC12**
+
+        - Kèm danh sách `payments` của đơn.
+        - Khi `status = PAID`: có `receipt` (biên lai nội bộ, in bằng trình duyệt) và `subscriptionId`.
+        - Đây là nguồn duy nhất để FE biết đã thanh toán xong (sau khi quay về từ VNPay).
+      responses:
+        '200':
+          description: Chi tiết đơn.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+              examples:
+                pending: { $ref: '#/components/examples/OrderPending' }
+                paid: { $ref: '#/components/examples/OrderPaid' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /orders/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Đơn hàng]
+      operationId: cancelOrder
+      summary: Hủy đơn chưa thanh toán
+      description: |
+        **Quyền:** MEMBER (của mình), STAFF, ADMIN · **UC09**
+
+        - Chỉ hủy được đơn `PENDING`. Payment `PENDING` của đơn chuyển `FAILED`.
+        - Staff/Admin hủy hộ thì ghi `audit_logs` kèm `reason`.
+        - Gửi lặp khi đơn đã `CANCELLED`: trả `200` với đơn hiện tại.
+
+        **Chưa chốt (Q16):** mã lỗi khi đơn đã `PAID` hoặc `EXPIRED`. Hồng Anh bổ sung vào `error-codes.md`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelOrderRequest' }
+            example: { reason: 'Khách đổi ý, chọn gói khác' }
+      responses:
+        '200':
+          description: Đơn sau khi hủy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------------------
+  # THANH TOÁN (5)
+  # ---------------------------------------------------------------------------
+  /orders/{id}/payments:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Thanh toán]
+      operationId: createPayment
+      summary: Chọn phương thức và tạo thanh toán cho đơn
+      description: |
+        **Quyền:** MEMBER (đơn của mình), STAFF, ADMIN · **UC12, UC13**
+
+        - `VNPAY`: trả `checkoutUrl`; FE chuyển trình duyệt sang địa chỉ này. Hạn đơn thành 30 phút.
+        - `CASH`: trả payment `PENDING`; hạn đơn là hết ngày. Staff xác nhận bằng
+          `POST /payments/{id}/confirm-cash` khi nhận tiền.
+        - Đơn đã có payment `PENDING` (ví dụ bấm thanh toán lại): BE chuyển payment cũ sang `FAILED`
+          rồi tạo payment mới. Mỗi đơn chỉ có tối đa 1 payment `PENDING`.
+        - `amount` luôn bằng `total` của đơn; FE không gửi số tiền.
+
+        **Chưa chốt (Q16):** mã lỗi khi đơn không còn `PENDING` (đã trả, đã hủy, quá hạn).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePaymentRequest' }
+            examples:
+              vnpay:
+                summary: Thanh toán VNPay
+                value: { method: VNPAY }
+              cash:
+                summary: Trả tiền mặt tại quầy
+                value: { method: CASH }
+      responses:
+        '201':
+          description: Đã tạo thanh toán.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+              examples:
+                vnpay: { $ref: '#/components/examples/PaymentVnpayPending' }
+                cash: { $ref: '#/components/examples/PaymentCashPending' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /payments:
+    get:
+      tags: [Thanh toán]
+      operationId: listPayments
+      summary: Lịch sử giao dịch
+      description: |
+        **Quyền:** MEMBER (của mình), STAFF (chỉ trong ngày), ADMIN · **UC14**
+
+        - MEMBER: chỉ thấy giao dịch của mình.
+        - STAFF: chỉ xem giao dịch **hôm nay** để đối soát tiền mặt (quyết định 19); `from`, `to` bị
+          BE đặt về hôm nay.
+        - Sắp xếp: mới nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+        - name: method
+          in: query
+          schema: { $ref: '#/components/schemas/PaymentMethod' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/PaymentStatus' }
+        - $ref: '#/components/parameters/MemberIdQuery'
+      responses:
+        '200':
+          description: Danh sách giao dịch.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Payment' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                PaymentCashSuccessList: { $ref: '#/components/examples/PaymentCashSuccessList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /payments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Thanh toán]
+      operationId: getPayment
+      summary: Xem chi tiết giao dịch
+      description: |
+        **Quyền:** MEMBER (của mình), STAFF (trong ngày), ADMIN · **UC14**
+      responses:
+        '200':
+          description: Chi tiết giao dịch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+              examples:
+                PaymentCashSuccess: { $ref: '#/components/examples/PaymentCashSuccess' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /payments/{id}/confirm-cash:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Thanh toán]
+      operationId: confirmCashPayment
+      summary: Xác nhận đã nhận tiền mặt
+      description: |
+        **Quyền:** STAFF, ADMIN · **UC13**
+
+        - `receivedAmount` phải **bằng** số tiền cần thu; khác thì `422 CASH_AMOUNT_MISMATCH`
+          (kèm `details.expectedAmount`).
+        - Thành công, trong **một transaction**: payment `SUCCESS` → đơn `PAID` + `receiptNo` → tạo gói hội viên
+          `ACTIVE` → thông báo cho hội viên → ghi `audit_logs`.
+        - Gửi lặp khi payment đã `SUCCESS`: trả `200` với kết quả cũ, không tạo gói lần hai.
+        - Payment không phải `CASH`: `400 VALIDATION_ERROR`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmCashRequest' }
+            example: { receivedAmount: 500000 }
+      responses:
+        '200':
+          description: Đã xác nhận; đơn đã PAID.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+              examples:
+                PaymentCashSuccess: { $ref: '#/components/examples/PaymentCashSuccess' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Số tiền nhận khác số tiền cần thu.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                CASH_AMOUNT_MISMATCH: { $ref: '#/components/examples/ErrCashAmountMismatch' }
+
+  /payments/vnpay/ipn:
+    get:
+      tags: [Thanh toán]
+      operationId: vnpayIpn
+      summary: VNPay báo kết quả thanh toán (IPN)
+      description: |
+        **Quyền:** chỉ VNPay gọi (kiểm chữ ký `vnp_SecureHash`) · **UC12** · **FE không gọi endpoint này.**
+
+        - Tham số là bộ `vnp_*` theo tài liệu VNPay; dưới đây chỉ liệt kê các tham số BE dùng.
+        - BE xử lý theo thứ tự: kiểm chữ ký → tìm payment theo `vnp_TxnRef` (= `merchantRef`) →
+          so số tiền (`vnp_Amount` = amount × 100) → nếu thành công thì kích hoạt gói trong một transaction
+          (như confirm-cash) → lưu toàn bộ tham số vào `gateway_payload`.
+        - VNPay có thể gọi lặp: lần sau trả `RspCode 02`, không tạo gói lần hai
+          (chặn bằng unique `gateway_txn_id`).
+        - **Chưa chốt (Q17):** IPN báo thành công cho payment đã bị chuyển `FAILED` (người dùng bấm thanh toán
+          lại nhưng vẫn trả bằng link cũ).
+        - Response **không** theo dạng lỗi chung mà theo định dạng VNPay yêu cầu: luôn HTTP 200 với
+          `{ RspCode, Message }`.
+
+        | RspCode | Ý nghĩa |
+        | --- | --- |
+        | 00 | Đã ghi nhận |
+        | 01 | Không tìm thấy giao dịch |
+        | 02 | Giao dịch đã được xử lý trước đó |
+        | 04 | Sai số tiền |
+        | 97 | Sai chữ ký |
+        | 99 | Lỗi khác |
+      security: []
+      parameters:
+        - { name: vnp_TxnRef, in: query, required: true, description: 'Mã giao dịch phía mình (merchantRef).', schema: { type: string } }
+        - { name: vnp_Amount, in: query, required: true, description: 'Số tiền × 100.', schema: { type: string } }
+        - { name: vnp_ResponseCode, in: query, required: true, description: "`00` là thanh toán thành công.", schema: { type: string } }
+        - { name: vnp_TransactionStatus, in: query, required: true, description: "`00` là giao dịch thành công.", schema: { type: string } }
+        - { name: vnp_TransactionNo, in: query, required: true, description: 'Mã giao dịch phía VNPay (gatewayTxnId).', schema: { type: string } }
+        - { name: vnp_SecureHash, in: query, required: true, description: 'Chữ ký HMAC SHA512.', schema: { type: string } }
+      responses:
+        '200':
+          description: Kết quả xử lý gửi lại cho VNPay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VnpayIpnResponse' }
+              example: { RspCode: '00', Message: Confirm Success }
+
+  # ---------------------------------------------------------------------------
+  # CHECK-IN (3)
+  # ---------------------------------------------------------------------------
+  /check-ins:
+    post:
+      tags: [Check-in]
+      operationId: createCheckIn
+      summary: Check-in bằng QR hoặc số điện thoại
+      description: |
+        **Quyền:** STAFF, ADMIN · **UC16**
+
+        - Gửi `qrToken` (quét QR) **hoặc** `phone` (nhập tay), không gửi cả hai.
+        - BE tự chọn gói có quyền vào phòng còn hiệu lực hôm nay và trả trong `subscription`.
+        - Gói còn 7 ngày trở xuống: `expiringSoon = true` để FE hiện cảnh báo "sắp hết hạn".
+        - Thứ tự kiểm tra và mã lỗi:
+          1. QR không khớp ai: `422 INVALID_QR`. SĐT không khớp hội viên nào: `404 NOT_FOUND`.
+          2. Còn lượt chưa check-out: `409 ALREADY_CHECKED_IN` (kèm `details.checkInId`).
+          3. Không có gói nào: `422 NO_ACTIVE_SUBSCRIPTION`. Gói gần nhất đã hết hạn: `422 SUBSCRIPTION_EXPIRED`.
+             Gói đang bảo lưu: `422 SUBSCRIPTION_FROZEN`.
+        - Check-in **không trừ** buổi PT.
+        - **Chưa chốt (Q17):** gói đã mua nhưng chưa tới `startsOn`; gói PT có được vào phòng tập tự do không.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCheckInRequest' }
+            examples:
+              qr:
+                summary: Quét mã QR
+                value: { qrToken: QR-7d3e1f9a2b4c6e8f }
+              phone:
+                summary: Nhập số điện thoại
+                value: { phone: '0901234567' }
+      responses:
+        '201':
+          description: Đã check-in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckIn' }
+              examples:
+                CheckInOpen: { $ref: '#/components/examples/CheckInOpen' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Hội viên đang trong phòng (chưa check-out lượt trước).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                ALREADY_CHECKED_IN: { $ref: '#/components/examples/ErrAlreadyCheckedIn' }
+        '422':
+          description: QR sai hoặc không có gói còn hiệu lực.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                INVALID_QR: { $ref: '#/components/examples/ErrInvalidQr' }
+                NO_ACTIVE_SUBSCRIPTION: { $ref: '#/components/examples/ErrNoActiveSubscription' }
+                SUBSCRIPTION_EXPIRED: { $ref: '#/components/examples/ErrSubscriptionExpired' }
+                SUBSCRIPTION_FROZEN: { $ref: '#/components/examples/ErrSubscriptionFrozen' }
+    get:
+      tags: [Check-in]
+      operationId: listCheckIns
+      summary: Lịch sử ra vào, người đang trong phòng
+      description: |
+        **Quyền:** MEMBER (của mình), STAFF, ADMIN · **UC18**
+
+        - `present=true`: chỉ lấy lượt chưa check-out (người đang tập).
+        - MEMBER: chỉ thấy của mình.
+        - Sắp xếp: check-in mới nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/MemberIdQuery'
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+        - name: present
+          in: query
+          description: "`true` chỉ lấy người đang trong phòng."
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Danh sách lượt ra vào.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/CheckIn' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                CheckInOpenList: { $ref: '#/components/examples/CheckInOpenList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /check-ins/{id}/checkout:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Check-in]
+      operationId: checkOut
+      summary: Check-out
+      description: |
+        **Quyền:** MEMBER (lượt của mình), STAFF, ADMIN · **UC17**
+
+        - Hội viên tự bấm: `checkoutType = SELF`. Staff làm hộ: `STAFF`. Job 23:59: `AUTO`.
+        - Gửi lặp khi lượt đã check-out: trả `200` với lượt hiện tại.
+      responses:
+        '200':
+          description: Lượt sau khi check-out.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckIn' }
+              examples:
+                CheckInClosed: { $ref: '#/components/examples/CheckInClosed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------------------
+  # HỘI VIÊN (4 + 1 đặt lại mật khẩu tại quầy theo Q15)
+  # ---------------------------------------------------------------------------
+  /members:
+    get:
+      tags: [Hội viên]
+      operationId: listMembers
+      summary: Tìm hội viên
+      description: |
+        **Quyền:** STAFF, ADMIN; TRAINER chỉ thấy hội viên mình phụ trách · **UC19, UC28**
+
+        - `q` tìm theo tên (không dấu), số điện thoại hoặc mã hội viên.
+        - PT phụ trách = có lịch PENDING/CONFIRMED/COMPLETED với PT đó (quyết định 16).
+        - Sắp xếp: tạo mới nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          description: Tên, SĐT hoặc mã hội viên.
+          schema: { type: string, maxLength: 100 }
+        - name: hasActiveSubscription
+          in: query
+          description: "`true` chỉ hội viên có gói ACTIVE; `false` chỉ khách hàng chưa có gói."
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Danh sách hội viên.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Member' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                MemberAnList: { $ref: '#/components/examples/MemberAnList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Hội viên]
+      operationId: createMember
+      summary: Thêm hội viên tại quầy
+      description: |
+        **Quyền:** STAFF, ADMIN · **UC20**
+
+        - Tạo tài khoản MEMBER **chưa có mật khẩu** (`accountActivated = false`).
+        - Kích hoạt: có email thì khách dùng "Quên mật khẩu"; không có email thì Staff đặt mật khẩu tại quầy
+          (`POST /members/{id}/reset-password`).
+        - SĐT đã dùng: `409 PHONE_DUPLICATED` (kèm `details.memberId` nếu là hội viên, để FE mở hồ sơ đó).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMemberRequest' }
+            example: { fullName: Trần Thị Bình, phone: '0912345678', email: null, dob: '2000-01-15' }
+      responses:
+        '201':
+          description: Đã tạo hội viên.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberDetail' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: SĐT hoặc email đã được dùng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                PHONE_DUPLICATED: { $ref: '#/components/examples/ErrPhoneDuplicated' }
+                EMAIL_DUPLICATED: { $ref: '#/components/examples/ErrEmailDuplicated' }
+
+  /members/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Hội viên]
+      operationId: getMember
+      summary: Xem chi tiết hội viên
+      description: |
+        **Quyền:** STAFF, ADMIN; TRAINER chỉ hội viên mình phụ trách · **UC19, UC28**
+
+        - Kèm các gói `ACTIVE` và `FROZEN` (`subscriptions`) với số buổi PT đã tính sẵn.
+        - Kèm lượt đang trong phòng (`currentCheckIn`), nếu có.
+        - Không trả `qrToken` (chỉ chủ tài khoản thấy qua `GET /me`).
+      responses:
+        '200':
+          description: Chi tiết hội viên.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberDetail' }
+              examples:
+                MemberAnDetail: { $ref: '#/components/examples/MemberAnDetail' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Hội viên]
+      operationId: updateMember
+      summary: Sửa thông tin hội viên
+      description: |
+        **Quyền:** STAFF, ADMIN · **UC20**
+
+        Chỉ gửi field muốn đổi. Đổi SĐT thì SĐT mới là định danh đăng nhập mới.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMemberRequest' }
+            example: { phone: '0987654321' }
+      responses:
+        '200':
+          description: Hội viên sau khi sửa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberDetail' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: SĐT hoặc email đã được dùng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                PHONE_DUPLICATED: { $ref: '#/components/examples/ErrPhoneDuplicated' }
+                EMAIL_DUPLICATED: { $ref: '#/components/examples/ErrEmailDuplicated' }
+
+  /members/{id}/reset-password:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Hội viên]
+      operationId: resetMemberPasswordAtDesk
+      summary: Đặt lại mật khẩu hoặc kích hoạt tại quầy
+      description: |
+        **Quyền:** STAFF, ADMIN · **UC04, UC20** · Q15
+
+        Dùng khi khách **không có email** nên không tự đặt lại được.
+        1. Staff đối chiếu SĐT với khách tại quầy.
+        2. **Khách tự gõ** mật khẩu mới trên máy quầy (Staff không biết mật khẩu, không có mật khẩu tạm).
+        3. BE đặt mật khẩu, kích hoạt tài khoản nếu chưa kích hoạt, thu hồi mọi phiên cũ, ghi `audit_logs`.
+
+        **Chờ cập nhật:** endpoint này chưa có trong `docs/spec/api-v3.md` (Huy Trường bổ sung theo Q15).
+      x-spec-status: chờ api-v3 (Q15)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeskResetPasswordRequest' }
+            example: { newPassword: matkhaumoi456 }
+      responses:
+        '204':
+          description: Đã đặt mật khẩu mới; khách đăng nhập được ngay.
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------------------
+  # TÀI KHOẢN (6)
+  # ---------------------------------------------------------------------------
+  /users:
+    get:
+      tags: [Tài khoản]
+      operationId: listUsers
+      summary: Danh sách tài khoản
+      description: |
+        **Quyền:** ADMIN · **UC31**
+
+        Mặc định trả mọi vai trò; lọc bằng `role`. Hội viên nên xem ở `GET /members` (có thêm thông tin gói).
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          description: Tên (không dấu), SĐT hoặc email.
+          schema: { type: string, maxLength: 100 }
+        - name: role
+          in: query
+          schema: { $ref: '#/components/schemas/Role' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/UserStatus' }
+      responses:
+        '200':
+          description: Danh sách tài khoản.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                UserTrainerList: { $ref: '#/components/examples/UserTrainerList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Tài khoản]
+      operationId: createUser
+      summary: Tạo tài khoản Staff hoặc PT
+      description: |
+        **Quyền:** ADMIN · **UC32**
+
+        - `role` là `STAFF` hoặc `TRAINER` (UC32). Hội viên tạo ở `POST /members`; muốn có Admin mới thì
+          tạo Staff rồi đổi vai trò (`PATCH /users/{id}/role`).
+        - Admin đặt mật khẩu ban đầu và báo cho nhân viên; nhân viên tự đổi bằng `POST /auth/change-password`.
+        - `TRAINER`: gửi kèm `trainer` (chuyên môn, giới thiệu, kinh nghiệm); BE tạo hồ sơ PT.
+        - `STAFF`: có thể gửi `shift` (ca làm).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateUserRequest' }
+            example:
+              role: TRAINER
+              fullName: Lê Minh Cường
+              phone: '0900000003'
+              email: cuong.pt@example.com
+              password: matkhau123
+              trainer:
+                specialties: [Giảm mỡ, Tăng cơ]
+                bio: 5 năm kinh nghiệm huấn luyện thể hình.
+                experienceYears: 5
+      responses:
+        '201':
+          description: Đã tạo tài khoản.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+              examples:
+                UserTrainer: { $ref: '#/components/examples/UserTrainer' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: SĐT hoặc email đã được dùng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                PHONE_DUPLICATED: { $ref: '#/components/examples/ErrPhoneDuplicated' }
+                EMAIL_DUPLICATED: { $ref: '#/components/examples/ErrEmailDuplicated' }
+
+  /users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Tài khoản]
+      operationId: getUser
+      summary: Xem chi tiết tài khoản
+      description: |
+        **Quyền:** ADMIN · **UC31**
+      responses:
+        '200':
+          description: Chi tiết tài khoản.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+              examples:
+                UserTrainer: { $ref: '#/components/examples/UserTrainer' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Tài khoản]
+      operationId: updateUser
+      summary: Sửa thông tin tài khoản
+      description: |
+        **Quyền:** ADMIN · **UC33**
+
+        - Chỉ gửi field muốn đổi. `shift` chỉ áp dụng cho STAFF.
+        - Chuyên môn, giới thiệu của PT sửa ở `PATCH /trainers/{id}` (nhóm PT, bản đủ 74 API).
+        - Không đổi vai trò, trạng thái ở đây (dùng `/role`, `/status`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserRequest' }
+            example: { fullName: Lê Minh Cường, shift: Ca sáng }
+      responses:
+        '200':
+          description: Tài khoản sau khi sửa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: SĐT hoặc email đã được dùng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                PHONE_DUPLICATED: { $ref: '#/components/examples/ErrPhoneDuplicated' }
+                EMAIL_DUPLICATED: { $ref: '#/components/examples/ErrEmailDuplicated' }
+
+  /users/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Tài khoản]
+      operationId: updateUserStatus
+      summary: Khóa hoặc mở khóa tài khoản
+      description: |
+        **Quyền:** ADMIN · **UC34**
+
+        - `LOCKED`: người đó bị đăng xuất khỏi mọi thiết bị ngay (tăng `token_version`) và không đăng nhập được
+          (`403 ACCOUNT_LOCKED`).
+        - `ACTIVE`: mở khóa.
+        - Bắt buộc `reason`. Ghi `audit_logs`.
+        - Admin không tự khóa chính mình: `403 FORBIDDEN`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserStatusRequest' }
+            example: { status: LOCKED, reason: Nghỉ việc từ 01/11 }
+      responses:
+        '200':
+          description: Tài khoản sau khi đổi trạng thái.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /users/{id}/role:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Tài khoản]
+      operationId: updateUserRole
+      summary: Đổi vai trò
+      description: |
+        **Quyền:** ADMIN · **UC35**
+
+        - Chỉ đổi giữa `ADMIN`, `STAFF`, `TRAINER`. Đổi từ hoặc sang `MEMBER`: `422 ROLE_CHANGE_NOT_ALLOWED`.
+        - Đổi PT sang vai trò khác khi PT còn lịch hoặc lớp trong tương lai: `422 ROLE_CHANGE_NOT_ALLOWED`.
+        - Đổi sang `TRAINER`: BE tạo hồ sơ PT trống (sửa sau ở `PATCH /trainers/{id}`).
+        - Người bị đổi vai trò bị đăng xuất khỏi mọi thiết bị. Bắt buộc `reason`. Ghi `audit_logs`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserRoleRequest' }
+            example: { role: STAFF, reason: Chuyển sang làm quầy }
+      responses:
+        '200':
+          description: Tài khoản sau khi đổi vai trò.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Không đổi được vai trò cho tài khoản này.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                ROLE_CHANGE_NOT_ALLOWED: { $ref: '#/components/examples/ErrRoleChangeNotAllowed' }
+
+  # ---------------------------------------------------------------------------
+  # VẬN HÀNH (1)
+  # ---------------------------------------------------------------------------
+  /health:
+    get:
+      tags: [Vận hành]
+      operationId: health
+      summary: Kiểm tra server còn chạy
+      description: "**Quyền:** Public"
+      security: []
+      responses:
+        '200':
+          description: Server đang chạy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+              example: { status: ok }
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token từ `/auth/login` hoặc `/auth/refresh`, hạn 15 phút.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: "Cookie HttpOnly do BE đặt. FE không đọc được, chỉ cần gọi với `credentials: 'include'`."
+
+  headers:
+    SetRefreshCookie:
+      description: Đặt cookie refresh (HttpOnly, SameSite=Lax, path /api/v1/auth).
+      schema:
+        type: string
+        examples: ['refresh_token=eyJhbGciOi...; Path=/api/v1/auth; HttpOnly; SameSite=Lax; Max-Age=604800']
+    ClearRefreshCookie:
+      description: Xóa cookie refresh.
+      schema:
+        type: string
+        examples: ['refresh_token=; Path=/api/v1/auth; HttpOnly; SameSite=Lax; Max-Age=0']
+
+  # ---------------------------------------------------------------------------
+  # Tham số dùng chung
+  # ---------------------------------------------------------------------------
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Mã UUID của tài nguyên.
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      description: Trang, bắt đầu từ 1.
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      description: Số dòng mỗi trang.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    FromDate:
+      name: from
+      in: query
+      description: Từ ngày (tính cả ngày này), giờ Việt Nam.
+      schema: { type: string, format: date }
+    ToDate:
+      name: to
+      in: query
+      description: Đến ngày (tính cả ngày này), giờ Việt Nam.
+      schema: { type: string, format: date }
+    MemberIdQuery:
+      name: memberId
+      in: query
+      description: Lọc theo hội viên (`members.id`). Chỉ STAFF, ADMIN dùng; MEMBER bị bỏ qua.
+      schema: { type: string, format: uuid }
+
+  # ---------------------------------------------------------------------------
+  # Response lỗi dùng chung
+  # ---------------------------------------------------------------------------
+  responses:
+    ValidationError:
+      description: Dữ liệu gửi lên sai hoặc thiếu (`VALIDATION_ERROR`). `details` liệt kê từng field sai.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            VALIDATION_ERROR: { $ref: '#/components/examples/ErrValidation' }
+    Unauthenticated:
+      description: Chưa đăng nhập hoặc access token hết hạn (`UNAUTHENTICATED`). FE gọi `/auth/refresh` rồi thử lại.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            UNAUTHENTICATED: { $ref: '#/components/examples/ErrUnauthenticated' }
+    Forbidden:
+      description: Sai vai trò (`FORBIDDEN`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            FORBIDDEN: { $ref: '#/components/examples/ErrForbidden' }
+    NotFound:
+      description: Không có tài nguyên, hoặc có nhưng không thuộc quyền của bạn (`NOT_FOUND`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            NOT_FOUND: { $ref: '#/components/examples/ErrNotFound' }
+    RateLimited:
+      description: Gọi quá nhiều lần (`RATE_LIMITED`). `details.retryAfterSeconds` là số giây cần chờ.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            RATE_LIMITED: { $ref: '#/components/examples/ErrRateLimited' }
+
+  # ---------------------------------------------------------------------------
+  # Schema
+  # ---------------------------------------------------------------------------
+  schemas:
+
+    # ----- Kiểu cơ bản -----
+    Money:
+      type: integer
+      minimum: 0
+      description: Số tiền VND, số nguyên.
+      examples: [500000]
+    Phone:
+      type: string
+      pattern: '^0[0-9]{9}$'
+      description: Số điện thoại Việt Nam 10 số, bắt đầu bằng 0.
+      examples: ['0901234567']
+    Password:
+      type: string
+      minLength: 8
+      maxLength: 72
+      description: Mật khẩu, 8 đến 72 ký tự.
+      examples: [matkhau123]
+    DateOnly:
+      type: string
+      format: date
+      description: Ngày thuần theo giờ Việt Nam, `YYYY-MM-DD`.
+      examples: ['2026-10-08']
+    DateTime:
+      type: string
+      format: date-time
+      description: Thời điểm ISO 8601 có múi giờ `+07:00`.
+      examples: ['2026-10-08T09:30:00+07:00']
+
+    # ----- Danh mục giá trị (enum) -----
+    Role:
+      type: string
+      enum: [ADMIN, STAFF, TRAINER, MEMBER]
+      description: ADMIN quản trị · STAFF nhân viên quầy · TRAINER huấn luyện viên (PT) · MEMBER khách hàng/hội viên.
+    UserStatus:
+      type: string
+      enum: [ACTIVE, LOCKED]
+      description: ACTIVE đang dùng · LOCKED bị Admin khóa.
+    TrainerStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+      description: ACTIVE đang nhận lịch · INACTIVE ngừng nhận lịch.
+    PackageType:
+      type: string
+      enum: [GYM, PT]
+      description: GYM gói tập tự do · PT gói tập với huấn luyện viên (có số buổi).
+    PackageStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+      description: ACTIVE đang bán · INACTIVE ngừng bán.
+    DurationUnit:
+      type: string
+      enum: [DAY, MONTH]
+      description: Đơn vị thời hạn gói.
+    OrderStatus:
+      type: string
+      enum: [PENDING, PAID, CANCELLED, EXPIRED]
+      description: PENDING chờ thanh toán · PAID đã trả · CANCELLED đã hủy · EXPIRED quá hạn thanh toán.
+    PaymentMethod:
+      type: string
+      enum: [VNPAY, CASH]
+      description: VNPAY thanh toán online sandbox · CASH tiền mặt tại quầy.
+    PaymentStatus:
+      type: string
+      enum: [PENDING, SUCCESS, FAILED]
+      description: PENDING đang chờ · SUCCESS thành công · FAILED thất bại hoặc bị thay bằng lần trả khác.
+    SubscriptionStatus:
+      type: string
+      enum: [ACTIVE, FROZEN, EXPIRED, CANCELLED]
+      description: ACTIVE còn hiệu lực · FROZEN đang bảo lưu · EXPIRED hết hạn · CANCELLED Admin hủy.
+    CheckInMethod:
+      type: string
+      enum: [QR, PHONE]
+      description: Cách check-in.
+    CheckoutType:
+      type: string
+      enum: [SELF, STAFF, AUTO]
+      description: SELF hội viên tự check-out · STAFF nhân viên làm hộ · AUTO job 23:59 tự đóng.
+    ErrorCode:
+      type: string
+      description: Mã lỗi. Danh mục, HTTP status và câu hiển thị ở `docs/api/error-codes.md`.
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHENTICATED
+        - FORBIDDEN
+        - NOT_FOUND
+        - INVALID_CREDENTIALS
+        - ACCOUNT_LOCKED
+        - ACCOUNT_TEMPORARILY_LOCKED
+        - ACTIVATION_REQUIRED
+        - PHONE_DUPLICATED
+        - EMAIL_DUPLICATED
+        - TOKEN_EXPIRED
+        - INVALID_FILE
+        - PENDING_ORDER_EXISTS
+        - CASH_AMOUNT_MISMATCH
+        - NO_ACTIVE_SUBSCRIPTION
+        - SUBSCRIPTION_EXPIRED
+        - SUBSCRIPTION_FROZEN
+        - SUBSCRIPTION_NOT_ACTIVE
+        - SUBSCRIPTION_NOT_FROZEN
+        - ALREADY_CHECKED_IN
+        - INVALID_QR
+        - FREEZE_BLOCKED_BY_APPOINTMENTS
+        - SCHEDULE_CONFLICT
+        - STALE_VERSION
+        - NO_SESSIONS_AVAILABLE
+        - OUTSIDE_SUBSCRIPTION_PERIOD
+        - SESSION_NOT_ENDED
+        - NO_CLASS_BENEFIT
+        - CLASS_FULL
+        - CANCELLATION_WINDOW_PASSED
+        - ROLE_CHANGE_NOT_ALLOWED
+        - RATE_LIMITED
+        - INTERNAL_ERROR
+
+    # ----- Lỗi và phân trang -----
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details, requestId]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message:
+              type: string
+              description: Câu ngắn cho dev đọc. FE không hiển thị, không dựa vào.
+            details:
+              description: |
+                Thông tin thêm, tùy mã lỗi:
+                - `VALIDATION_ERROR`: danh sách `{ field, messages }`.
+                - `PENDING_ORDER_EXISTS`: `{ orderId }`. `PHONE_DUPLICATED`: `{ memberId }` (nếu có).
+                - `ACCOUNT_TEMPORARILY_LOCKED`, `RATE_LIMITED`: `{ retryAfterSeconds }`.
+                - `ALREADY_CHECKED_IN`: `{ checkInId }`. `CASH_AMOUNT_MISMATCH`: `{ expectedAmount }`.
+                - Mã khác: `null`.
+              oneOf:
+                - type: 'null'
+                - type: array
+                  items: { $ref: '#/components/schemas/FieldError' }
+                - type: object
+                  additionalProperties: true
+            requestId:
+              type: string
+              description: Mã truy vết, trùng header `X-Request-Id`. FE hiện trong phần chi tiết lỗi.
+    FieldError:
+      type: object
+      required: [field, messages]
+      properties:
+        field:
+          type: string
+          description: Tên field sai, dạng đường dẫn (`trainer.bio`).
+        messages:
+          type: array
+          items: { type: string }
+    PageMeta:
+      type: object
+      required: [page, pageSize, total, totalPages]
+      properties:
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0, description: Tổng số dòng khớp bộ lọc. }
+        totalPages: { type: integer, minimum: 0 }
+
+    # ----- Xác thực -----
+    RegisterRequest:
+      type: object
+      required: [fullName, phone, password]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email:
+          type: [string, 'null']
+          format: email
+          maxLength: 255
+          description: Không bắt buộc (Q15). Có email thì tự đặt lại mật khẩu được.
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+          description: Ngày sinh, không bắt buộc.
+        password: { $ref: '#/components/schemas/Password' }
+      additionalProperties: false
+    LoginRequest:
+      type: object
+      required: [phone, password]
+      properties:
+        phone: { $ref: '#/components/schemas/Phone' }
+        password:
+          type: string
+          minLength: 1
+          description: Không kiểm độ dài khi đăng nhập, chỉ so với mật khẩu đã lưu.
+      additionalProperties: false
+    ForgotPasswordRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone: { $ref: '#/components/schemas/Phone' }
+      additionalProperties: false
+    ResetPasswordRequest:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string, minLength: 1, description: Lấy từ tham số `token` trên link trong email. }
+        newPassword: { $ref: '#/components/schemas/Password' }
+      additionalProperties: false
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, minLength: 1 }
+        newPassword: { $ref: '#/components/schemas/Password' }
+      additionalProperties: false
+    DeskResetPasswordRequest:
+      type: object
+      required: [newPassword]
+      properties:
+        newPassword: { $ref: '#/components/schemas/Password' }
+      additionalProperties: false
+    AuthSession:
+      type: object
+      description: Phiên đăng nhập. Cookie refresh đi kèm qua header `Set-Cookie`.
+      required: [accessToken, expiresIn, user]
+      properties:
+        accessToken: { type: string, description: 'JWT, gửi trong header `Authorization: Bearer`.' }
+        expiresIn: { type: integer, description: Số giây còn hiệu lực của access token (900 = 15 phút). }
+        user: { $ref: '#/components/schemas/SessionUser' }
+    SessionUser:
+      type: object
+      description: Thông tin tối thiểu để FE dựng giao diện theo vai trò. Muốn đủ thì gọi `GET /me`.
+      required: [id, fullName, role, phone, email, avatarUrl]
+      properties:
+        id: { type: string, format: uuid, description: '`users.id`' }
+        fullName: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email: { type: [string, 'null'], format: email }
+        avatarUrl: { type: [string, 'null'] }
+
+    # ----- Hồ sơ -----
+    Me:
+      type: object
+      required: [id, fullName, phone, email, dob, avatarUrl, role, status, shift, member, trainer, createdAt]
+      properties:
+        id: { type: string, format: uuid, description: '`users.id`' }
+        fullName: { type: string }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email: { type: [string, 'null'], format: email }
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+        avatarUrl: { type: [string, 'null'] }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { $ref: '#/components/schemas/UserStatus' }
+        shift: { type: [string, 'null'], description: 'Ca làm, chỉ STAFF có.' }
+        member:
+          description: Chỉ MEMBER có; vai trò khác là `null`.
+          oneOf:
+            - $ref: '#/components/schemas/MyMemberProfile'
+            - type: 'null'
+        trainer:
+          description: Chỉ TRAINER có; vai trò khác là `null`.
+          oneOf:
+            - $ref: '#/components/schemas/TrainerProfile'
+            - type: 'null'
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+    MyMemberProfile:
+      type: object
+      required: [id, memberCode, qrToken, hasActiveSubscription]
+      properties:
+        id: { type: string, format: uuid, description: '`members.id`' }
+        memberCode: { type: string, description: Mã hội viên in trên thẻ. }
+        qrToken: { type: string, description: Nội dung FE dùng để vẽ mã QR. Chỉ chủ tài khoản thấy. }
+        hasActiveSubscription:
+          type: boolean
+          description: "`true` là hội viên (có gói ACTIVE); `false` là khách hàng."
+    TrainerProfile:
+      type: object
+      required: [id, specialties, bio, experienceYears, status]
+      properties:
+        id: { type: string, format: uuid, description: '`trainers.id`' }
+        specialties: { type: array, items: { type: string } }
+        bio: { type: [string, 'null'] }
+        experienceYears: { type: [integer, 'null'], minimum: 0 }
+        status: { $ref: '#/components/schemas/TrainerStatus' }
+    UpdateMeRequest:
+      type: object
+      minProperties: 1
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: [string, 'null'], format: email, maxLength: 255 }
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+        avatarUrl: { type: [string, 'null'], description: Lấy từ `POST /uploads/avatar`; `null` để bỏ ảnh. }
+        trainer:
+          type: object
+          description: Chỉ TRAINER gửi.
+          minProperties: 1
+          properties:
+            specialties: { type: array, items: { type: string, maxLength: 50 }, maxItems: 10 }
+            bio: { type: [string, 'null'], maxLength: 1000 }
+            experienceYears: { type: [integer, 'null'], minimum: 0, maximum: 60 }
+          additionalProperties: false
+      additionalProperties: false
+    QrTokenResponse:
+      type: object
+      required: [qrToken]
+      properties:
+        qrToken: { type: string }
+    AvatarUploadResponse:
+      type: object
+      required: [avatarUrl]
+      properties:
+        avatarUrl: { type: string }
+
+    # ----- Gói -----
+    Package:
+      type: object
+      required: [id, name, description, type, price, durationValue, durationUnit, totalSessions, sessionMinutes, includesClass, benefits, status]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        type: { $ref: '#/components/schemas/PackageType' }
+        price: { $ref: '#/components/schemas/Money' }
+        durationValue: { type: integer, minimum: 1, description: 'Thời hạn, ví dụ 3 (kèm durationUnit MONTH = 3 tháng).' }
+        durationUnit: { $ref: '#/components/schemas/DurationUnit' }
+        totalSessions: { type: [integer, 'null'], minimum: 1, description: Số buổi PT. `null` với gói GYM. }
+        sessionMinutes: { type: [integer, 'null'], minimum: 15, description: Số phút mỗi buổi PT. `null` với gói GYM. }
+        includesClass: { type: boolean, description: Có quyền tham gia lớp nhóm. }
+        benefits: { type: array, items: { type: string }, description: Danh sách quyền lợi để hiển thị. }
+        status: { $ref: '#/components/schemas/PackageStatus' }
+    CreatePackageRequest:
+      type: object
+      required: [name, type, price, durationValue, durationUnit, includesClass]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        type: { $ref: '#/components/schemas/PackageType' }
+        price: { $ref: '#/components/schemas/Money' }
+        durationValue: { type: integer, minimum: 1 }
+        durationUnit: { $ref: '#/components/schemas/DurationUnit' }
+        totalSessions: { type: [integer, 'null'], minimum: 1, description: Bắt buộc với PT. }
+        sessionMinutes: { type: [integer, 'null'], minimum: 15, description: Bắt buộc với PT. }
+        includesClass: { type: boolean }
+        benefits: { type: array, items: { type: string, maxLength: 200 }, maxItems: 20, default: [] }
+      additionalProperties: false
+    UpdatePackageRequest:
+      type: object
+      minProperties: 1
+      description: Như CreatePackageRequest nhưng mọi field đều không bắt buộc, không có `type`, thêm `status`.
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        price: { $ref: '#/components/schemas/Money' }
+        durationValue: { type: integer, minimum: 1 }
+        durationUnit: { $ref: '#/components/schemas/DurationUnit' }
+        totalSessions: { type: [integer, 'null'], minimum: 1 }
+        sessionMinutes: { type: [integer, 'null'], minimum: 15 }
+        includesClass: { type: boolean }
+        benefits: { type: array, items: { type: string, maxLength: 200 }, maxItems: 20 }
+        status: { $ref: '#/components/schemas/PackageStatus' }
+      additionalProperties: false
+
+    # ----- Đơn hàng -----
+    OrderRequest:
+      type: object
+      required: [packageId]
+      description: Dùng cho cả `POST /orders/quote` và `POST /orders`.
+      properties:
+        packageId: { type: string, format: uuid }
+        memberId:
+          type: string
+          format: uuid
+          description: Bắt buộc khi STAFF/ADMIN mua hộ. MEMBER không gửi (BE lấy từ token).
+        renewalOf:
+          type: string
+          format: uuid
+          description: Id gói hội viên đang có, khi gia hạn.
+        startsOn:
+          $ref: '#/components/schemas/DateOnly'
+          description: Ngày bắt đầu, không trước hôm nay. Không gửi thì BE tự chọn (xem mô tả endpoint).
+      additionalProperties: false
+    OrderQuote:
+      type: object
+      required: [packageId, packageName, type, price, total, durationValue, durationUnit, totalSessions, sessionMinutes, includesClass, startsOn, endsOn, renewalOf]
+      properties:
+        packageId: { type: string, format: uuid }
+        packageName: { type: string }
+        type: { $ref: '#/components/schemas/PackageType' }
+        price: { $ref: '#/components/schemas/Money' }
+        total: { $ref: '#/components/schemas/Money' }
+        durationValue: { type: integer }
+        durationUnit: { $ref: '#/components/schemas/DurationUnit' }
+        totalSessions: { type: [integer, 'null'] }
+        sessionMinutes: { type: [integer, 'null'] }
+        includesClass: { type: boolean }
+        startsOn: { $ref: '#/components/schemas/DateOnly' }
+        endsOn:
+          $ref: '#/components/schemas/DateOnly'
+          description: Ngày cuối cùng còn hiệu lực (tính cả ngày này). BE tính, FE chỉ hiển thị.
+        renewalOf: { type: [string, 'null'], format: uuid }
+    OrderTerms:
+      type: object
+      description: Điều khoản gói **chụp lại lúc tạo đơn**. Không đổi khi Admin sửa gói.
+      required: [price, durationValue, durationUnit, totalSessions, sessionMinutes, includesClass]
+      properties:
+        price: { $ref: '#/components/schemas/Money' }
+        durationValue: { type: integer }
+        durationUnit: { $ref: '#/components/schemas/DurationUnit' }
+        totalSessions: { type: [integer, 'null'] }
+        sessionMinutes: { type: [integer, 'null'] }
+        includesClass: { type: boolean }
+    Order:
+      type: object
+      required: [id, member, package, renewalOf, terms, startsOn, endsOn, total, status, expiresAt, paidAt, receiptNo, subscriptionId, createdBy, createdAt, payments, receipt]
+      properties:
+        id: { type: string, format: uuid }
+        member: { $ref: '#/components/schemas/MemberRef' }
+        package: { $ref: '#/components/schemas/PackageRef' }
+        renewalOf: { type: [string, 'null'], format: uuid, description: Gói hội viên được gia hạn. }
+        terms: { $ref: '#/components/schemas/OrderTerms' }
+        startsOn: { $ref: '#/components/schemas/DateOnly' }
+        endsOn: { $ref: '#/components/schemas/DateOnly' }
+        total: { $ref: '#/components/schemas/Money' }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        expiresAt:
+          $ref: '#/components/schemas/DateTime'
+          description: Hạn thanh toán. Quá hạn thì job chuyển đơn sang EXPIRED.
+        paidAt:
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        receiptNo: { type: [string, 'null'], description: 'Số biên lai, có khi PAID.' }
+        subscriptionId: { type: [string, 'null'], format: uuid, description: 'Gói hội viên sinh ra, có khi PAID.' }
+        createdBy: { $ref: '#/components/schemas/UserRef' }
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+          description: Cần cột `orders.created_at`, ERD v3 chưa có (Q16).
+        payments:
+          type: array
+          description: Các lần thanh toán của đơn, mới nhất trước.
+          items: { $ref: '#/components/schemas/PaymentSummary' }
+        receipt:
+          description: Biên lai nội bộ, chỉ có khi PAID.
+          oneOf:
+            - $ref: '#/components/schemas/Receipt'
+            - type: 'null'
+    Receipt:
+      type: object
+      description: Đủ thông tin để FE in biên lai bằng trình duyệt (quyết định 7).
+      required: [receiptNo, paidAt, memberName, memberCode, memberPhone, packageName, startsOn, endsOn, amount, method, collectedBy]
+      properties:
+        receiptNo: { type: string }
+        paidAt: { $ref: '#/components/schemas/DateTime' }
+        memberName: { type: string }
+        memberCode: { type: string }
+        memberPhone: { $ref: '#/components/schemas/Phone' }
+        packageName: { type: string }
+        startsOn: { $ref: '#/components/schemas/DateOnly' }
+        endsOn: { $ref: '#/components/schemas/DateOnly' }
+        amount: { $ref: '#/components/schemas/Money' }
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        collectedBy:
+          description: Nhân viên thu tiền mặt; `null` với VNPay.
+          oneOf:
+            - $ref: '#/components/schemas/UserRef'
+            - type: 'null'
+    CancelOrderRequest:
+      type: object
+      properties:
+        reason: { type: string, maxLength: 500, description: Bắt buộc khi STAFF/ADMIN hủy hộ. }
+      additionalProperties: false
+
+    # ----- Thanh toán -----
+    CreatePaymentRequest:
+      type: object
+      required: [method]
+      properties:
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+      additionalProperties: false
+    ConfirmCashRequest:
+      type: object
+      required: [receivedAmount]
+      properties:
+        receivedAmount:
+          $ref: '#/components/schemas/Money'
+          description: Số tiền Staff đã nhận, phải bằng số tiền cần thu.
+      additionalProperties: false
+    PaymentSummary:
+      type: object
+      required: [id, method, amount, status, paidAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        amount: { $ref: '#/components/schemas/Money' }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        paidAt:
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+          description: Cần cột `payments.created_at`, ERD v3 chưa có (Q16).
+    Payment:
+      type: object
+      required: [id, orderId, member, method, amount, status, merchantRef, gatewayTxnId, checkoutUrl, confirmedBy, paidAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        member: { $ref: '#/components/schemas/MemberRef' }
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        amount: { $ref: '#/components/schemas/Money' }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        merchantRef: { type: string, description: 'Mã giao dịch phía mình, gửi sang VNPay là `vnp_TxnRef`.' }
+        gatewayTxnId: { type: [string, 'null'], description: Mã giao dịch phía VNPay. }
+        checkoutUrl:
+          type: [string, 'null']
+          format: uri
+          description: Chỉ có ở response tạo payment VNPAY; FE chuyển trình duyệt sang đây. Các chỗ khác là `null`.
+        confirmedBy:
+          description: Staff xác nhận tiền mặt.
+          oneOf:
+            - $ref: '#/components/schemas/UserRef'
+            - type: 'null'
+        paidAt:
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+          description: Cần cột `payments.created_at`, ERD v3 chưa có (Q16).
+    VnpayIpnResponse:
+      type: object
+      required: [RspCode, Message]
+      description: Định dạng do VNPay quy định (không theo camelCase của hệ thống).
+      properties:
+        RspCode: { type: string, enum: ['00', '01', '02', '04', '97', '99'] }
+        Message: { type: string }
+
+    # ----- Check-in -----
+    CreateCheckInRequest:
+      type: object
+      description: Gửi đúng một trong hai field.
+      oneOf:
+        - required: [qrToken]
+          properties:
+            qrToken: { type: string, minLength: 1, description: Nội dung quét từ mã QR. }
+          additionalProperties: false
+        - required: [phone]
+          properties:
+            phone: { $ref: '#/components/schemas/Phone' }
+          additionalProperties: false
+    CheckIn:
+      type: object
+      required: [id, member, subscription, method, checkedInAt, checkedOutAt, checkoutType, checkedInBy, expiringSoon]
+      properties:
+        id: { type: string, format: uuid }
+        member: { $ref: '#/components/schemas/MemberRef' }
+        subscription: { $ref: '#/components/schemas/SubscriptionRef' }
+        method: { $ref: '#/components/schemas/CheckInMethod' }
+        checkedInAt: { $ref: '#/components/schemas/DateTime' }
+        checkedOutAt:
+          description: "`null` là đang trong phòng."
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        checkoutType:
+          oneOf:
+            - $ref: '#/components/schemas/CheckoutType'
+            - type: 'null'
+        checkedInBy:
+          description: Staff đã check-in cho hội viên.
+          oneOf:
+            - $ref: '#/components/schemas/UserRef'
+            - type: 'null'
+        expiringSoon:
+          type: boolean
+          description: Gói dùng để vào còn 7 ngày trở xuống. FE hiện cảnh báo "sắp hết hạn" (UC16).
+
+    # ----- Hội viên -----
+    Member:
+      type: object
+      description: Một dòng trong danh sách hội viên.
+      required: [id, userId, memberCode, fullName, phone, email, dob, avatarUrl, accountStatus, accountActivated, hasActiveSubscription, createdAt]
+      properties:
+        id: { type: string, format: uuid, description: '`members.id`' }
+        userId: { type: string, format: uuid, description: '`users.id`' }
+        memberCode: { type: string }
+        fullName: { type: string }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email: { type: [string, 'null'], format: email }
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+        avatarUrl: { type: [string, 'null'] }
+        accountStatus: { $ref: '#/components/schemas/UserStatus' }
+        accountActivated:
+          type: boolean
+          description: "`false` là hồ sơ tạo tại quầy, chưa đặt mật khẩu."
+        hasActiveSubscription:
+          type: boolean
+          description: "`true` là hội viên; `false` là khách hàng."
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+    MemberDetail:
+      allOf:
+        - $ref: '#/components/schemas/Member'
+        - type: object
+          required: [subscriptions, currentCheckIn]
+          properties:
+            subscriptions:
+              type: array
+              description: Gói ACTIVE và FROZEN, kết thúc sớm nhất trước.
+              items: { $ref: '#/components/schemas/SubscriptionSummary' }
+            currentCheckIn:
+              description: Lượt đang trong phòng; `null` nếu không ở phòng tập.
+              oneOf:
+                - $ref: '#/components/schemas/CheckInRef'
+                - type: 'null'
+    CreateMemberRequest:
+      type: object
+      required: [fullName, phone]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email: { type: [string, 'null'], format: email, maxLength: 255, description: Không bắt buộc (Q15). }
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+      additionalProperties: false
+    UpdateMemberRequest:
+      type: object
+      minProperties: 1
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email: { type: [string, 'null'], format: email, maxLength: 255 }
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+      additionalProperties: false
+
+    # ----- Gói hội viên (bản rút gọn; đầy đủ ở nhóm Gói hội viên, bản 74 API) -----
+    SessionCounts:
+      type: object
+      description: |
+        Số buổi PT, BE tính từ lịch (không lưu cột):
+        `used` = COMPLETED + NO_SHOW · `held` = PENDING + CONFIRMED · `remaining` = total − used ·
+        `bookable` = remaining − held.
+      required: [total, used, held, remaining, bookable]
+      properties:
+        total: { type: integer, minimum: 0 }
+        used: { type: integer, minimum: 0 }
+        held: { type: integer, minimum: 0 }
+        remaining: { type: integer, minimum: 0 }
+        bookable: { type: integer, minimum: 0 }
+    SubscriptionSummary:
+      type: object
+      required: [id, packageName, type, startsOn, endsOn, status, includesClass, sessions]
+      properties:
+        id: { type: string, format: uuid }
+        packageName: { type: string }
+        type: { $ref: '#/components/schemas/PackageType' }
+        startsOn: { $ref: '#/components/schemas/DateOnly' }
+        endsOn: { $ref: '#/components/schemas/DateOnly' }
+        status: { $ref: '#/components/schemas/SubscriptionStatus' }
+        includesClass: { type: boolean }
+        sessions:
+          description: Chỉ gói PT có; gói GYM là `null`.
+          oneOf:
+            - $ref: '#/components/schemas/SessionCounts'
+            - type: 'null'
+
+    # ----- Tài khoản -----
+    User:
+      type: object
+      required: [id, fullName, phone, email, dob, avatarUrl, role, status, shift, trainer, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email: { type: [string, 'null'], format: email }
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+        avatarUrl: { type: [string, 'null'] }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { $ref: '#/components/schemas/UserStatus' }
+        shift: { type: [string, 'null'], description: 'Ca làm, chỉ STAFF.' }
+        trainer:
+          description: Hồ sơ PT, chỉ TRAINER có.
+          oneOf:
+            - $ref: '#/components/schemas/TrainerProfile'
+            - type: 'null'
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+    CreateUserRequest:
+      type: object
+      required: [role, fullName, phone, password]
+      properties:
+        role:
+          type: string
+          enum: [STAFF, TRAINER]
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email: { type: [string, 'null'], format: email, maxLength: 255 }
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+        password: { $ref: '#/components/schemas/Password' }
+        shift: { type: [string, 'null'], maxLength: 50, description: Chỉ STAFF. }
+        trainer:
+          type: object
+          description: Chỉ TRAINER; bắt buộc khi role = TRAINER.
+          properties:
+            specialties: { type: array, items: { type: string, maxLength: 50 }, maxItems: 10, default: [] }
+            bio: { type: [string, 'null'], maxLength: 1000 }
+            experienceYears: { type: [integer, 'null'], minimum: 0, maximum: 60 }
+          additionalProperties: false
+      additionalProperties: false
+    UpdateUserRequest:
+      type: object
+      minProperties: 1
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        phone: { $ref: '#/components/schemas/Phone' }
+        email: { type: [string, 'null'], format: email, maxLength: 255 }
+        dob:
+          oneOf:
+            - $ref: '#/components/schemas/DateOnly'
+            - type: 'null'
+        shift: { type: [string, 'null'], maxLength: 50 }
+      additionalProperties: false
+    UpdateUserStatusRequest:
+      type: object
+      required: [status, reason]
+      properties:
+        status: { $ref: '#/components/schemas/UserStatus' }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+      additionalProperties: false
+    UpdateUserRoleRequest:
+      type: object
+      required: [role, reason]
+      properties:
+        role:
+          type: string
+          enum: [ADMIN, STAFF, TRAINER]
+        reason: { type: string, minLength: 1, maxLength: 500 }
+      additionalProperties: false
+
+    # ----- Tham chiếu rút gọn (nhúng trong object khác) -----
+    UserRef:
+      type: object
+      required: [id, fullName]
+      properties:
+        id: { type: string, format: uuid, description: '`users.id`' }
+        fullName: { type: string }
+    MemberRef:
+      type: object
+      required: [id, memberCode, fullName, phone, avatarUrl]
+      properties:
+        id: { type: string, format: uuid, description: '`members.id`' }
+        memberCode: { type: string }
+        fullName: { type: string }
+        phone: { $ref: '#/components/schemas/Phone' }
+        avatarUrl: { type: [string, 'null'] }
+    PackageRef:
+      type: object
+      required: [id, name, type]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, description: Tên gói hiện tại. }
+        type: { $ref: '#/components/schemas/PackageType' }
+    SubscriptionRef:
+      type: object
+      required: [id, packageName, endsOn, daysLeft]
+      properties:
+        id: { type: string, format: uuid }
+        packageName: { type: string }
+        endsOn: { $ref: '#/components/schemas/DateOnly' }
+        daysLeft: { type: integer, minimum: 0, description: 'Số ngày còn lại, tính cả hôm nay.' }
+    CheckInRef:
+      type: object
+      required: [id, checkedInAt]
+      properties:
+        id: { type: string, format: uuid }
+        checkedInAt: { $ref: '#/components/schemas/DateTime' }
+
+  # ---------------------------------------------------------------------------
+  # Ví dụ dùng chung (cũng là dữ liệu mock Prism trả về)
+  # Dữ liệu mẫu: Admin 0900000001, Staff 0900000002, PT 0900000003, hội viên Nguyễn Văn An 0901234567.
+  # ---------------------------------------------------------------------------
+  examples:
+
+    # ----- Phiên đăng nhập theo vai trò (Q8) -----
+    SessionAdmin:
+      summary: Admin
+      value:
+        accessToken: eyJhbGciOiJIUzI1NiJ9.admin.signature
+        expiresIn: 900
+        user: { id: 11111111-1111-4111-8111-111111111111, fullName: Phạm Quản Trị, role: ADMIN, phone: '0900000001', email: admin@example.com, avatarUrl: null }
+    SessionStaff:
+      summary: Staff
+      value:
+        accessToken: eyJhbGciOiJIUzI1NiJ9.staff.signature
+        expiresIn: 900
+        user: { id: 22222222-2222-4222-8222-222222222222, fullName: Hoàng Thu Quầy, role: STAFF, phone: '0900000002', email: null, avatarUrl: null }
+    SessionTrainer:
+      summary: PT
+      value:
+        accessToken: eyJhbGciOiJIUzI1NiJ9.trainer.signature
+        expiresIn: 900
+        user: { id: 33333333-3333-4333-8333-333333333333, fullName: Lê Minh Cường, role: TRAINER, phone: '0900000003', email: cuong.pt@example.com, avatarUrl: null }
+    SessionMember:
+      summary: Hội viên
+      value:
+        accessToken: eyJhbGciOiJIUzI1NiJ9.member.signature
+        expiresIn: 900
+        user: { id: 44444444-4444-4444-8444-444444444444, fullName: Nguyễn Văn An, role: MEMBER, phone: '0901234567', email: an.nguyen@example.com, avatarUrl: null }
+
+    # ----- Hồ sơ -----
+    MeMember:
+      summary: Hồ sơ hội viên
+      value:
+        id: 44444444-4444-4444-8444-444444444444
+        fullName: Nguyễn Văn An
+        phone: '0901234567'
+        email: an.nguyen@example.com
+        dob: '1998-05-20'
+        avatarUrl: null
+        role: MEMBER
+        status: ACTIVE
+        shift: null
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, qrToken: QR-7d3e1f9a2b4c6e8f, hasActiveSubscription: true }
+        trainer: null
+        createdAt: '2026-10-01T08:00:00+07:00'
+    MeTrainer:
+      summary: Hồ sơ PT
+      value:
+        id: 33333333-3333-4333-8333-333333333333
+        fullName: Lê Minh Cường
+        phone: '0900000003'
+        email: cuong.pt@example.com
+        dob: '1995-03-12'
+        avatarUrl: null
+        role: TRAINER
+        status: ACTIVE
+        shift: null
+        member: null
+        trainer: { id: 66666666-6666-4666-8666-666666666666, specialties: [Giảm mỡ, Tăng cơ], bio: 5 năm kinh nghiệm huấn luyện thể hình., experienceYears: 5, status: ACTIVE }
+        createdAt: '2026-09-01T08:00:00+07:00'
+
+    # ----- Gói -----
+    PackageGym:
+      summary: Gói GYM 1 tháng
+      value: &PackageGym
+        id: 77777777-7777-4777-8777-777777777777
+        name: Gym 1 tháng
+        description: Tập tự do tại phòng gym trong 1 tháng.
+        type: GYM
+        price: 500000
+        durationValue: 1
+        durationUnit: MONTH
+        totalSessions: null
+        sessionMinutes: null
+        includesClass: false
+        benefits: [Tập không giới hạn, Tủ đồ miễn phí]
+        status: ACTIVE
+    PackagePt:
+      summary: Gói PT 12 buổi
+      value:
+        id: 88888888-8888-4888-8888-888888888888
+        name: PT 12 buổi
+        description: 12 buổi tập 1 kèm 1 với PT trong 2 tháng.
+        type: PT
+        price: 6000000
+        durationValue: 2
+        durationUnit: MONTH
+        totalSessions: 12
+        sessionMinutes: 60
+        includesClass: true
+        benefits: [Tập 1 kèm 1, Đo InBody mỗi tháng, Vào lớp nhóm]
+        status: ACTIVE
+
+    # ----- Đơn hàng -----
+    OrderPending:
+      summary: Đơn chờ thanh toán
+      value:
+        id: 99999999-9999-4999-8999-999999999999
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        package: { id: 77777777-7777-4777-8777-777777777777, name: Gym 1 tháng, type: GYM }
+        renewalOf: null
+        terms: { price: 500000, durationValue: 1, durationUnit: MONTH, totalSessions: null, sessionMinutes: null, includesClass: false }
+        startsOn: '2026-10-10'
+        endsOn: '2026-11-09'
+        total: 500000
+        status: PENDING
+        expiresAt: '2026-10-08T23:59:59+07:00'
+        paidAt: null
+        receiptNo: null
+        subscriptionId: null
+        createdBy: { id: 44444444-4444-4444-8444-444444444444, fullName: Nguyễn Văn An }
+        createdAt: '2026-10-08T09:30:00+07:00'
+        payments: []
+        receipt: null
+    OrderPaid:
+      summary: Đơn đã thanh toán (có biên lai)
+      value: &OrderPaid
+        id: 99999999-9999-4999-8999-999999999999
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        package: { id: 77777777-7777-4777-8777-777777777777, name: Gym 1 tháng, type: GYM }
+        renewalOf: null
+        terms: { price: 500000, durationValue: 1, durationUnit: MONTH, totalSessions: null, sessionMinutes: null, includesClass: false }
+        startsOn: '2026-10-10'
+        endsOn: '2026-11-09'
+        total: 500000
+        status: PAID
+        expiresAt: '2026-10-08T23:59:59+07:00'
+        paidAt: '2026-10-08T09:45:00+07:00'
+        receiptNo: BL-20261008-0001
+        subscriptionId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+        createdBy: { id: 22222222-2222-4222-8222-222222222222, fullName: Hoàng Thu Quầy }
+        createdAt: '2026-10-08T09:30:00+07:00'
+        payments:
+          - { id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa, method: CASH, amount: 500000, status: SUCCESS, paidAt: '2026-10-08T09:45:00+07:00', createdAt: '2026-10-08T09:31:00+07:00' }
+        receipt:
+          receiptNo: BL-20261008-0001
+          paidAt: '2026-10-08T09:45:00+07:00'
+          memberName: Nguyễn Văn An
+          memberCode: HV000123
+          memberPhone: '0901234567'
+          packageName: Gym 1 tháng
+          startsOn: '2026-10-10'
+          endsOn: '2026-11-09'
+          amount: 500000
+          method: CASH
+          collectedBy: { id: 22222222-2222-4222-8222-222222222222, fullName: Hoàng Thu Quầy }
+
+    # ----- Thanh toán -----
+    PaymentVnpayPending:
+      summary: VNPay vừa tạo, có checkoutUrl
+      value:
+        id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab
+        orderId: 99999999-9999-4999-8999-999999999999
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        method: VNPAY
+        amount: 500000
+        status: PENDING
+        merchantRef: GYM20261008093100A1B2
+        gatewayTxnId: null
+        checkoutUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=GYM20261008093100A1B2
+        confirmedBy: null
+        paidAt: null
+        createdAt: '2026-10-08T09:31:00+07:00'
+    PaymentCashPending:
+      summary: Tiền mặt chờ Staff xác nhận
+      value:
+        id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        orderId: 99999999-9999-4999-8999-999999999999
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        method: CASH
+        amount: 500000
+        status: PENDING
+        merchantRef: GYM20261008093100C3D4
+        gatewayTxnId: null
+        checkoutUrl: null
+        confirmedBy: null
+        paidAt: null
+        createdAt: '2026-10-08T09:31:00+07:00'
+    PaymentCashSuccess:
+      summary: Tiền mặt đã xác nhận
+      value: &PaymentCashSuccess
+        id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        orderId: 99999999-9999-4999-8999-999999999999
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        method: CASH
+        amount: 500000
+        status: SUCCESS
+        merchantRef: GYM20261008093100C3D4
+        gatewayTxnId: null
+        checkoutUrl: null
+        confirmedBy: { id: 22222222-2222-4222-8222-222222222222, fullName: Hoàng Thu Quầy }
+        paidAt: '2026-10-08T09:45:00+07:00'
+        createdAt: '2026-10-08T09:31:00+07:00'
+
+    # ----- Check-in -----
+    CheckInOpen:
+      summary: Đang trong phòng, gói sắp hết hạn
+      value: &CheckInOpen
+        id: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        subscription: { id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb, packageName: Gym 1 tháng, endsOn: '2026-10-12', daysLeft: 5 }
+        method: QR
+        checkedInAt: '2026-10-08T18:05:00+07:00'
+        checkedOutAt: null
+        checkoutType: null
+        checkedInBy: { id: 22222222-2222-4222-8222-222222222222, fullName: Hoàng Thu Quầy }
+        expiringSoon: true
+    CheckInClosed:
+      summary: Đã check-out
+      value:
+        id: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        subscription: { id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb, packageName: Gym 1 tháng, endsOn: '2026-10-12', daysLeft: 5 }
+        method: QR
+        checkedInAt: '2026-10-08T18:05:00+07:00'
+        checkedOutAt: '2026-10-08T19:40:00+07:00'
+        checkoutType: SELF
+        checkedInBy: { id: 22222222-2222-4222-8222-222222222222, fullName: Hoàng Thu Quầy }
+        expiringSoon: true
+
+    # ----- Hội viên -----
+    MemberAnDetail:
+      summary: Chi tiết hội viên kèm gói và lượt đang tập
+      value:
+        id: 55555555-5555-4555-8555-555555555555
+        userId: 44444444-4444-4444-8444-444444444444
+        memberCode: HV000123
+        fullName: Nguyễn Văn An
+        phone: '0901234567'
+        email: an.nguyen@example.com
+        dob: '1998-05-20'
+        avatarUrl: null
+        accountStatus: ACTIVE
+        accountActivated: true
+        hasActiveSubscription: true
+        createdAt: '2026-10-01T08:00:00+07:00'
+        subscriptions:
+          - id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+            packageName: Gym 1 tháng
+            type: GYM
+            startsOn: '2026-09-13'
+            endsOn: '2026-10-12'
+            status: ACTIVE
+            includesClass: false
+            sessions: null
+          - id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc
+            packageName: PT 12 buổi
+            type: PT
+            startsOn: '2026-10-01'
+            endsOn: '2026-11-30'
+            status: ACTIVE
+            includesClass: true
+            sessions: { total: 12, used: 3, held: 2, remaining: 9, bookable: 7 }
+        currentCheckIn: { id: cccccccc-cccc-4ccc-8ccc-cccccccccccc, checkedInAt: '2026-10-08T18:05:00+07:00' }
+
+    # ----- Tài khoản -----
+    UserTrainer:
+      summary: Tài khoản PT
+      value: &UserTrainer
+        id: 33333333-3333-4333-8333-333333333333
+        fullName: Lê Minh Cường
+        phone: '0900000003'
+        email: cuong.pt@example.com
+        dob: '1995-03-12'
+        avatarUrl: null
+        role: TRAINER
+        status: ACTIVE
+        shift: null
+        trainer: { id: 66666666-6666-4666-8666-666666666666, specialties: [Giảm mỡ, Tăng cơ], bio: 5 năm kinh nghiệm huấn luyện thể hình., experienceYears: 5, status: ACTIVE }
+        createdAt: '2026-09-01T08:00:00+07:00'
+
+    # ----- Danh sách (dùng lại ví dụ ở trên bằng YAML anchor) -----
+    CheckInOpenList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*CheckInOpen]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    MemberAnList:
+      summary: Danh sách 1 dòng
+      value:
+        data:
+          - id: 55555555-5555-4555-8555-555555555555
+            userId: 44444444-4444-4444-8444-444444444444
+            memberCode: HV000123
+            fullName: Nguyễn Văn An
+            phone: '0901234567'
+            email: an.nguyen@example.com
+            dob: '1998-05-20'
+            avatarUrl: null
+            accountStatus: ACTIVE
+            accountActivated: true
+            hasActiveSubscription: true
+            createdAt: '2026-10-01T08:00:00+07:00'
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    OrderPaidList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*OrderPaid]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    PackageGymList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*PackageGym]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    PaymentCashSuccessList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*PaymentCashSuccess]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    UserTrainerList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*UserTrainer]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+
+    # ----- Lỗi (mỗi mã một ví dụ; câu hiển thị xem error-codes.md) -----
+    ErrValidation:
+      summary: VALIDATION_ERROR
+      value:
+        error:
+          code: VALIDATION_ERROR
+          message: Dữ liệu không hợp lệ
+          details:
+            - { field: phone, messages: ['Số điện thoại phải gồm 10 số, bắt đầu bằng 0'] }
+          requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c
+    ErrWrongCurrentPassword:
+      summary: Mật khẩu hiện tại không đúng
+      value:
+        error:
+          code: VALIDATION_ERROR
+          message: Mật khẩu hiện tại không đúng
+          details:
+            - { field: currentPassword, messages: [Mật khẩu hiện tại không đúng] }
+          requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c
+    ErrUnauthenticated:
+      summary: UNAUTHENTICATED
+      value: { error: { code: UNAUTHENTICATED, message: Chưa đăng nhập hoặc phiên đã hết hạn, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrForbidden:
+      summary: FORBIDDEN
+      value: { error: { code: FORBIDDEN, message: Không có quyền, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrNotFound:
+      summary: NOT_FOUND
+      value: { error: { code: NOT_FOUND, message: Không tìm thấy, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrRateLimited:
+      summary: RATE_LIMITED
+      value: { error: { code: RATE_LIMITED, message: Gọi quá nhiều lần, details: { retryAfterSeconds: 60 }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrInvalidCredentials:
+      summary: INVALID_CREDENTIALS
+      value: { error: { code: INVALID_CREDENTIALS, message: Sai số điện thoại hoặc mật khẩu, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrAccountLocked:
+      summary: ACCOUNT_LOCKED
+      value: { error: { code: ACCOUNT_LOCKED, message: Tài khoản đã bị khóa, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrAccountTemporarilyLocked:
+      summary: ACCOUNT_TEMPORARILY_LOCKED
+      value: { error: { code: ACCOUNT_TEMPORARILY_LOCKED, message: Đăng nhập sai quá 5 lần, details: { retryAfterSeconds: 900 }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrActivationRequired:
+      summary: ACTIVATION_REQUIRED
+      value: { error: { code: ACTIVATION_REQUIRED, message: SĐT thuộc hồ sơ tại quầy chưa kích hoạt, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrPhoneDuplicated:
+      summary: PHONE_DUPLICATED
+      value: { error: { code: PHONE_DUPLICATED, message: SĐT đã được dùng, details: { memberId: 55555555-5555-4555-8555-555555555555 }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrEmailDuplicated:
+      summary: EMAIL_DUPLICATED
+      value: { error: { code: EMAIL_DUPLICATED, message: Email đã được dùng, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrTokenExpired:
+      summary: TOKEN_EXPIRED
+      value: { error: { code: TOKEN_EXPIRED, message: Link đặt mật khẩu hết hạn hoặc đã dùng, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrInvalidFile:
+      summary: INVALID_FILE
+      value: { error: { code: INVALID_FILE, message: Chỉ nhận JPEG hoặc PNG, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrPendingOrderExists:
+      summary: PENDING_ORDER_EXISTS
+      value: { error: { code: PENDING_ORDER_EXISTS, message: Đã có đơn chờ thanh toán cho gói này, details: { orderId: 99999999-9999-4999-8999-999999999999 }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrCashAmountMismatch:
+      summary: CASH_AMOUNT_MISMATCH
+      value: { error: { code: CASH_AMOUNT_MISMATCH, message: Số tiền nhận khác số tiền cần thu, details: { expectedAmount: 500000 }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrAlreadyCheckedIn:
+      summary: ALREADY_CHECKED_IN
+      value: { error: { code: ALREADY_CHECKED_IN, message: Hội viên chưa check-out lượt trước, details: { checkInId: cccccccc-cccc-4ccc-8ccc-cccccccccccc }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrInvalidQr:
+      summary: INVALID_QR
+      value: { error: { code: INVALID_QR, message: QR không hợp lệ, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrNoActiveSubscription:
+      summary: NO_ACTIVE_SUBSCRIPTION
+      value: { error: { code: NO_ACTIVE_SUBSCRIPTION, message: Không có gói còn hiệu lực, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrSubscriptionExpired:
+      summary: SUBSCRIPTION_EXPIRED
+      value: { error: { code: SUBSCRIPTION_EXPIRED, message: Gói đã hết hạn, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrSubscriptionFrozen:
+      summary: SUBSCRIPTION_FROZEN
+      value: { error: { code: SUBSCRIPTION_FROZEN, message: Gói đang bảo lưu, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrRoleChangeNotAllowed:
+      summary: ROLE_CHANGE_NOT_ALLOWED
+      value: { error: { code: ROLE_CHANGE_NOT_ALLOWED, message: Không đổi được vai trò, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
