@@ -1,0 +1,3 @@
+# Chạy lint-staged cho phần nào đã cài thư viện (FE: Sơn, BE: Triển)
+if [ -d frontend/node_modules ]; then (cd frontend && npx lint-staged) || exit 1; fi
+if [ -d backend/node_modules ]; then (cd backend && npx lint-staged) || exit 1; fi
