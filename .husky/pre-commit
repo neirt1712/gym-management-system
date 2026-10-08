@@ -1,1 +1,6 @@
 cd frontend && npx lint-staged
+cd ..
+# Q11: kiểm backend chỉ khi commit có file trong backend/ (máy chỉ làm FE không cần cài backend)
+if git diff --cached --name-only | grep -q '^backend/'; then
+  cd backend && npx lint-staged
+fi
