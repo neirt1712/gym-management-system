@@ -8,7 +8,7 @@ Cập nhật lần cuối: 08/10/2026 · Tuần 1
 
 | Người | Đã xong (tuần này) | Đang làm | Đang vướng / chờ ai |
 | --- | --- | --- | --- |
-| Triển | ADR 0001 (chốt TypeScript 06/10) | Khung NestJS, openapi v0.1 | |
+| Triển | ADR 0001 (chốt TypeScript 06/10); openapi v0.1 (8 nhóm, 37 API + `/health` + 2 endpoint Q6/Q15, lint đạt, mock Prism chạy được) | Khung NestJS (nhánh `trienw1-openapi`, chưa PR); openapi đủ 74 API (16/10) | Q16 (Hồng Anh), Q17 (Huy Trường) |
 | Hồng Anh | docker-compose ban đầu (Postgres 15, pgAdmin) | Thêm MailHog + extension btree_gist, unaccent, pg_trgm; migration 10 bảng | |
 | Sơn | Bộ cấu hình Claude Code, ADR 0002 (chấp nhận 08/10); khung FE (PR #4, 13 test xanh); bộ báo cáo tuần (PR #5); chốt Q2, Q6–Q15 | Lớp API (`api/client.ts`, Prism) từ khi có openapi; bản chốt tuần 1 (`docs/reports/tuan-01/CHOT-TUAN-01.md`) | Chờ openapi v0.1 (Triển, 08/10) |
 | Bằng | | Figma màn demo, token, component | |
