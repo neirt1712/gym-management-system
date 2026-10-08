@@ -23,7 +23,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   INVALID_QR: 'Không nhận ra mã QR. Thử nhập số điện thoại.',
   SUBSCRIPTION_NOT_ACTIVE: 'Chỉ bảo lưu được gói đang hiệu lực.',
   SUBSCRIPTION_NOT_FROZEN: 'Gói này không ở trạng thái bảo lưu.',
-  FREEZE_BLOCKED_BY_APPOINTMENTS: 'Gói còn lịch tập sắp tới. Hủy hoặc hoàn tất các lịch đó trước khi bảo lưu.',
+  FREEZE_BLOCKED_BY_APPOINTMENTS:
+    'Gói còn lịch tập sắp tới. Hủy hoặc hoàn tất các lịch đó trước khi bảo lưu.',
   SCHEDULE_CONFLICT: 'Khung giờ này bị trùng lịch. Chọn giờ khác.',
   STALE_VERSION: 'Lịch vừa được bên kia cập nhật. Xem lại đề xuất mới nhất.',
   NO_SESSIONS_AVAILABLE: 'Gói đã hết buổi có thể đặt.',

@@ -1,2 +1,6 @@
-CLAUDE.local.md
+# File cá nhân ở gốc repo (mẫu nằm trong docs/team/claude-local/)
+/CLAUDE.local.md
 .claude/settings.local.json
+
+# Thư viện của công cụ trong tools/
+tools/*/node_modules/

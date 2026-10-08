@@ -1,0 +1,12 @@
+# Giữ ký tự xuống dòng LF cho mọi file văn bản trên mọi máy (Windows, macOS, Linux), khớp Prettier.
+* text=auto eol=lf
+
+# File nhị phân: không đổi gì.
+*.docx binary
+*.xlsx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff2 binary

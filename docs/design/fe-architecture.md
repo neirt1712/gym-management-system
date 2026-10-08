@@ -20,6 +20,9 @@ component ──> hook (features/<domain>/api.ts, TanStack Query)
 - Nhiều request cùng gặp 401 thì chỉ gọi refresh 1 lần; các request khác chờ kết quả.
 - Mã HTTP: 401 → refresh; 403 → trang hoặc toast "không có quyền"; 409, 422 → thông điệp theo `error.code`; 429 → thông điệp và khóa nút trong `retryAfterSeconds`.
 - **Trước 08/10** (chưa có openapi): `AuthProvider` dùng interface `AuthApi` với bản giả `fakeAuthApi` (4 tài khoản mẫu, mỗi vai trò một). Có openapi v0.1 thì thay bằng `httpAuthApi`; không đổi component.
+  - Code: `src/features/auth/` (`authApi.ts` là interface, `fakeAuthApi.ts`, `AuthProvider.tsx`, `useAuth`). Chọn bản cài đặt ở `features/auth/index.ts` theo `VITE_AUTH_MODE` (`fake` | `http`).
+  - Tài khoản mẫu, mật khẩu chung `Demo@123`: Hội viên `0900000001`, PT `0900000002`, Quầy `0900000003`, Quản trị `0900000004`, tài khoản bị khóa `0900000009` (thử lỗi `ACCOUNT_LOCKED`).
+  - Bản giả nhớ phiên qua `sessionStorage` (chỉ id người dùng, không có token) để mô phỏng refresh cookie; bản thật không dùng storage.
 
 ## Bản đồ route
 
@@ -37,11 +40,18 @@ component ──> hook (features/<domain>/api.ts, TanStack Query)
 | `/trainer/schedule` | Trainer | Lịch ngày/tuần/tháng, yêu cầu chờ, xác nhận buổi | UC24–UC27 | Sơn |
 | `/trainer/availability` | Trainer | Khung giờ theo mẫu tuần | UC22 | Bằng |
 | `/trainer/members`, `/trainer/members/:id` | Trainer | Hội viên phụ trách, ghi chú, kế hoạch | UC28–UC30 | Bằng |
-| `/staff/members`, `/staff/members/:id` | Staff | Tìm, thêm, sửa hội viên, mua hộ, bảo lưu | UC09, UC11, UC19, UC20 | Bằng |
+| `/staff/members`, `/staff/members/:id` | Staff, Admin (Q14) | Tìm, thêm, sửa hội viên, mua hộ, bảo lưu, đặt lịch PT hộ (tuần 5–6) | UC09, UC11, UC19, UC20, UC23 | Bằng |
 | `/staff/check-in` | Staff | Quét QR, nhập SĐT, đang tập | UC16–UC18 | Bằng |
 | `/staff/payments` | Staff | Xác nhận tiền mặt, giao dịch trong ngày | UC13, UC14 | Bằng |
 | `/admin` | Admin | Dashboard | UC39–UC41 | Bằng |
-| `/admin/packages`, `/admin/users`, `/admin/trainers`, `/admin/classes`, `/admin/payments`, `/admin/notifications` | Admin | Quản trị | UC08, UC31–UC36, UC38, UC43 | Bằng |
+| `/admin/packages`, `/admin/users`, `/admin/trainers`, `/admin/classes`, `/admin/payments`, `/admin/notifications` | Admin | Quản trị | UC08, UC13, UC14, UC22, UC31–UC36, UC38, UC43 | Bằng |
 | `/notifications` | Mọi vai trò | Trung tâm thông báo | UC42 | Bằng |
 
-Route guard: chưa đăng nhập thì về `/login?next=…`; sai vai trò thì về trang 403. Quyền chi tiết trên từng hành động theo `allowedActions` do BE trả.
+Dùng chung màn giữa các vai trò (Q14, chốt 07/10):
+- Admin có mục menu "Hội viên" trỏ tới `/staff/members` (UC19 xem/tìm, UC11 bảo lưu); route này cho phép cả `STAFF` và `ADMIN`.
+- Staff đặt lịch PT hộ hội viên bằng nút trong `/staff/members/:id` (UC23).
+- Danh sách đăng ký lớp (UC38) nằm trong chi tiết lớp: PT mở từ `/trainer/schedule`; Staff xem trang lớp dùng chung ở chế độ chỉ đọc (route chốt khi Bằng vẽ Figma, tuần 7).
+
+Route guard: chưa đăng nhập thì về `/login?next=…`; sai vai trò thì về trang 403. Quyền chi tiết trên từng hành động theo `allowedActions` do BE trả. `next` chỉ nhận đường dẫn nội bộ (bắt đầu bằng `/`, không phải `//`).
+
+Trong code: route khai báo ở `src/app/router.tsx`; menu theo vai trò ở `src/app/navigation.tsx` (mỗi mục ghi UC và người làm). Route chưa có màn dùng `PlaceholderPage`; người làm màn thay bằng màn thật và thêm route chi tiết `:id`. Trang đầu sau đăng nhập theo vai trò: `ROLE_HOME` trong `src/app/roles.ts`.

@@ -34,7 +34,7 @@ Tài liệu khác:
 | Huy Trường | PM | `docs/team/roles/pm.md` |
 
 - Cặp review chéo: Triển ↔ Hồng Anh, Sơn ↔ Bằng.
-- Người đang dùng Claude khai vai trò trong `CLAUDE.local.md` (không commit), và file đó import file vai trò của họ.
+- Người đang dùng Claude khai vai trò trong `CLAUDE.local.md` (không commit), và file đó import file vai trò của họ. Mẫu `CLAUDE.local.md`, `settings.local.json` (quyền theo vai trò) và skill riêng của Lead cho từng người: `docs/team/claude-local/<ten>/` (cách chép trong `README.md` của thư mục đó).
 - Chỉ sửa trong phạm vi vai trò. Việc ngoài phạm vi thì đề xuất, tạo CR hoặc đưa patch; không sửa thẳng.
 
 ## Kiến trúc (ADR 0001, đã chốt 06/10: TypeScript)
@@ -55,7 +55,7 @@ Tài liệu khác:
 - Không bịa endpoint, field, mã lỗi, màn hình hay quy tắc. Không có trong tài liệu nghĩa là chưa tồn tại.
 - Ngoài phạm vi, không tự làm: nâng cấp gói, mã giảm giá, điểm thưởng, hoàn tiền, SMS, hóa đơn điện tử, đánh giá PT, lớp lặp tuần, màn xem audit log.
 - Git theo `CONTRIBUTING.md`:
-  - nhánh `feature/UCxx-<mo-ta>`;
+  - nhánh `<ten>w<tuan>-<mo-ta>` (ví dụ `tsonw1-fe-scaffold`);
   - Conventional Commits có mã UC;
   - PR vào `develop`, 1 review, CI xanh.
 - Không bao giờ: đọc hay commit `.env`, push, `--force`, xóa hàng loạt, tắt lint hay test để cho qua.
@@ -77,7 +77,7 @@ Tài liệu khác:
 
 | Tiền tố | Ai dùng | Skill |
 | --- | --- | --- |
-| `team-` | Cả nhóm | `team-start`, `team-finish`, `team-handoff`, `team-api-cr` |
+| `team-` | Cả nhóm | `team-start`, `team-finish`, `team-handoff`, `team-api-cr`, `team-report` (báo cáo tuần cá nhân), `team-week-close` (Sơn: xuất gói cho Claude web, nhập kết quả về repo) |
 | `fe-` | Sơn, Bằng | `fe-screen`, `fe-api-hook`, `fe-ui-check` |
 | `be-` | Triển, Hồng Anh | `be-endpoint`, `be-schema-change`, `be-check` |
 | `fe-lead-` | Chỉ Sơn (máy cá nhân) | `fe-lead-week`, `fe-lead-review`, `fe-lead-contract` |

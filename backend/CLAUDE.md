@@ -18,9 +18,10 @@ Không thêm thư viện mới khi chưa hỏi BE Lead (Triển).
 
 ```
 src/
-  main.ts, app.module.ts
-  common/        filters (format lỗi), guards (jwt, roles, ownership), interceptors (requestId),
-                 errors/ (AppError + mã lỗi), audit/ (AuditService), time/ (giờ VN)
+  main.ts, app.module.ts, app.setup.ts (cấu hình dùng chung cho main và test e2e)
+  common/        auth/ (JwtAuthGuard, RolesGuard, @Public, @Roles, @CurrentUser), filters/ (format lỗi),
+                 http/ (requestId, ValidationPipe), errors/ (AppError + mã lỗi);
+                 thêm sau: audit/ (AuditService), time/ (giờ VN), ownership
   config/        đọc .env, tham số nghiệp vụ (hạn đơn, mốc job…)
   prisma/        PrismaService
   modules/<domain>/  <domain>.controller.ts, .service.ts, dto/, <domain>.spec.ts
@@ -29,13 +30,15 @@ prisma/
 test/            e2e *.e2e-spec.ts
 ```
 
-Tên module trùng tên nhóm API: auth, me, packages, orders, payments, subscriptions, check-ins, members, trainers, appointments, training, users, classes, reports, notifications, health.
+Tên module trùng tên nhóm API: auth, me, packages, orders, payments, subscriptions, check-ins, members, trainers, appointments, training, users, classes, reports, notifications, health. Danh sách nạp vào app ở `src/modules/index.ts`.
+
+Mọi endpoint mặc định cần đăng nhập (JwtAuthGuard toàn cục). Endpoint công khai gắn `@Public()`; giới hạn vai trò gắn `@Roles('ADMIN', ...)`.
 
 ## Ai sở hữu gì (sửa ngoài phạm vi thì báo người kia trước)
 
-| Triển (BE Lead) | Hồng Anh (BE Sub) |
-| --- | --- |
-| `common/` (filters, guards, errors), `docs/api/openapi.yaml`, `docs/adr/` | `prisma/` (schema, migration, seed), `docker-compose.yml`, `.github/workflows/`, `config/` |
+| Triển (BE Lead)                                                                                  | Hồng Anh (BE Sub)                                                                                                                    |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `common/` (filters, guards, errors), `docs/api/openapi.yaml`, `docs/adr/`                        | `prisma/` (schema, migration, seed), `docker-compose.yml`, `.github/workflows/`, `config/`                                           |
 | modules: auth, me, orders, payments (VNPay), subscriptions (đọc), appointments, classes, reports | modules: packages, users, members, check-ins, trainers (availability), training, subscriptions (freeze), notifications, jobs, health |
 
 Đổi `schema.prisma` luôn qua Hồng Anh: người khác viết đề xuất (đoạn schema + lý do), Hồng Anh tạo migration.
@@ -44,7 +47,7 @@ Tên module trùng tên nhóm API: auth, me, packages, orders, payments, subscri
 
 - Contract-first: endpoint, field, mã lỗi phải có trong `docs/api/openapi.yaml` trước khi code. Muốn đổi thì Triển sửa yaml rồi báo FE (Sơn).
 - Controller mỏng: chỉ nhận DTO, gọi service, trả kết quả. Nghiệp vụ, transaction và kiểm quyền sở hữu nằm ở service.
-- Mọi lỗi nghiệp vụ ném `AppError(code, httpStatus, details?)`. Filter chung chuyển thành `{error:{code,message,details,requestId}}`.
+- Mọi lỗi nghiệp vụ ném `new AppError(code, details?)`; HTTP status tự lấy từ `common/errors/codes.ts`. Filter chung chuyển thành `{error:{code,message,details,requestId}}`.
 - Tên bảng, cột: snake_case tiếng Anh (`@@map`, `@map`). Field trong code và API: camelCase.
 - Không `console.log`; dùng `Logger` của Nest, có requestId.
 - Không để secret trong code; mọi khóa VNPay, SMTP, JWT nằm ở `.env`.
