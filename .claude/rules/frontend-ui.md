@@ -46,3 +46,9 @@ Tinh thần: sáng, gọn, nhiều khoảng trắng, một màu nhấn xanh ng�
 
 - Mọi input có label. Icon-only button có `aria-label`. Không truyền tải thông tin chỉ bằng màu (Tag luôn có chữ).
 - Icon chỉ dùng `@ant-design/icons`.
+
+## Khi dùng `/impeccable`
+
+- Impeccable là gợi ý thiết kế. Khi khác quy ước nhóm, **quy ước nhóm thắng**: Ant Design 5 và component dùng chung, token trong `theme/tokens.ts`, màu trạng thái trong `theme/status.ts`, và file này (ví dụ: vẫn dùng `Card` cho màn chi tiết, font Be Vietnam Pro).
+- Không cài hook của impeccable (ADR 0002 D7). Muốn chạy bộ luật phát hiện lỗi thì gọi `/impeccable audit` bằng tay.
+- `/impeccable init` tạo `PRODUCT.md`, `DESIGN.md`: phải dựa trên `docs/spec/` và `docs/design/`, không tự đặt mục tiêu sản phẩm mới.
