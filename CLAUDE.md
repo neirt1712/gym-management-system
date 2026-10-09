@@ -7,6 +7,7 @@ Tuần hiện tại: tính từ ngày hôm nay, tuần 1 bắt đầu Thứ Hai 
 ## Nguồn sự thật (đọc file, không đoán)
 
 Thứ tự ưu tiên khi mâu thuẫn, từ cao xuống:
+
 1. **Phạm vi:** `docs/spec/use-cases-v3.md` (44 UC), `docs/spec/erd-v3.md` (18 bảng), `docs/spec/api-v3.md` (74 API)
 2. **Nghiệp vụ:** `docs/spec/decisions.md` (19 quyết định)
 3. **Người, hạn, phụ thuộc:** `docs/plan/fe-plan.md`, `docs/plan/be-plan.md`
@@ -17,6 +18,7 @@ Gặp mâu thuẫn hoặc thiếu thông tin: **không tự chọn**. Ghi vào `
 Không chép nội dung spec vào CLAUDE.md, rule hay skill; trỏ tới file gốc.
 
 Tài liệu khác:
+
 - Quyết định kiến trúc: `docs/adr/`.
 - Vai trò: `docs/team/roles/`.
 - Quy trình: `CONTRIBUTING.md`, `docs/process/dor-dod.md`.
@@ -25,13 +27,13 @@ Tài liệu khác:
 
 ## Thành viên
 
-| Người | Vai trò | File vai trò |
-| --- | --- | --- |
-| Triển | BE Lead | `docs/team/roles/be-lead.md` |
-| Hồng Anh | BE Sub | `docs/team/roles/be-sub.md` |
+| Người      | Vai trò | File vai trò                 |
+| ---------- | ------- | ---------------------------- |
+| Triển      | BE Lead | `docs/team/roles/be-lead.md` |
+| Hồng Anh   | BE Sub  | `docs/team/roles/be-sub.md`  |
 | Trường Sơn | FE Lead | `docs/team/roles/fe-lead.md` |
-| Thanh Bằng | FE Sub | `docs/team/roles/fe-sub.md` |
-| Huy Trường | PM | `docs/team/roles/pm.md` |
+| Thanh Bằng | FE Sub  | `docs/team/roles/fe-sub.md`  |
+| Huy Trường | PM      | `docs/team/roles/pm.md`      |
 
 - Cặp review chéo: Triển ↔ Hồng Anh, Sơn ↔ Bằng.
 - Người đang dùng Claude khai vai trò trong `CLAUDE.local.md` (không commit), và file đó import file vai trò của họ. Mẫu `CLAUDE.local.md`, `settings.local.json` (quyền theo vai trò) và skill riêng của Lead cho từng người: `docs/team/claude-local/<ten>/` (cách chép trong `README.md` của thư mục đó).
@@ -75,10 +77,11 @@ Tài liệu khác:
 
 ## Skill (tên có tiền tố, không trùng nhau)
 
-| Tiền tố | Ai dùng | Skill |
-| --- | --- | --- |
-| `team-` | Cả nhóm | `team-start`, `team-finish`, `team-handoff`, `team-api-cr`, `team-report` (báo cáo tuần cá nhân), `team-week-close` (Sơn: xuất gói cho Claude web, nhập kết quả về repo) |
-| `fe-` | Sơn, Bằng | `fe-screen`, `fe-api-hook`, `fe-ui-check` |
+| Tiền tố | Ai dùng   | Skill                                                                                                                                                                    |
+| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `team-` | Cả nhóm   | `team-start`, `team-finish`, `team-handoff`, `team-api-cr`, `team-report` (báo cáo tuần cá nhân), `team-week-close` (Sơn: xuất gói cho Claude web, nhập kết quả về repo) |
+| `fe-`   | Sơn, Bằng | `fe-screen`, `fe-api-hook`, `fe-ui-check`, `impeccable` (gợi ý thiết kế UI/UX, cài từ pbakaus/impeccable, cập nhật bằng `npx impeccable update`)                         |
+
 | `be-` | Triển, Hồng Anh | `be-endpoint`, `be-schema-change`, `be-check` |
 | `fe-lead-` | Chỉ Sơn (máy cá nhân) | `fe-lead-week`, `fe-lead-review`, `fe-lead-contract` |
 | `be-lead-` | Chỉ Triển (máy cá nhân) | `be-lead-week`, `be-lead-review`, `be-lead-contract` |
