@@ -22,7 +22,9 @@
       "Bash(git add *)",
       "Edit(/docs/reports/**)",
       "Bash(git fetch *)",
-      "Bash(node tools/report-docx/*)"
+      "Bash(node tools/report-docx/*)",
+      "Edit(/docs/design/ui/**)",
+      "Edit(/docs/design/fe-huong-dan-component.md)"
     ],
     "deny": [
       "Edit(/backend/**)",

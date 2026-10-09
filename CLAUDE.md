@@ -22,7 +22,7 @@ Tài liệu khác:
 - Quyết định kiến trúc: `docs/adr/`.
 - Vai trò: `docs/team/roles/`.
 - Quy trình: `CONTRIBUTING.md`, `docs/process/dor-dod.md`.
-- Thiết kế: `docs/design/`.
+- Thiết kế: `docs/design/`. Thiết kế giao diện (trạng thái chốt, brief Figma, theo dõi màn, quyết định màu và phong cách): `docs/design/ui/README.md`.
 - Trạng thái và bàn giao: `docs/handoff/`.
 
 ## Thành viên
@@ -83,6 +83,6 @@ Tài liệu khác:
 | `fe-`   | Sơn, Bằng | `fe-screen`, `fe-api-hook`, `fe-ui-check`, `impeccable` (gợi ý thiết kế UI/UX, cài từ pbakaus/impeccable, cập nhật bằng `npx impeccable update`)                         |
 
 | `be-` | Triển, Hồng Anh | `be-endpoint`, `be-schema-change`, `be-check` |
-| `fe-lead-` | Chỉ Sơn (máy cá nhân) | `fe-lead-week`, `fe-lead-review`, `fe-lead-contract` |
+| `fe-lead-` | Chỉ Sơn (máy cá nhân) | `fe-lead-week`, `fe-lead-review`, `fe-lead-contract`; `fe-design-lock` (trong repo, chỉ Sơn gõ: chốt thiết kế, sinh hướng dẫn giao diện chi tiết) |
 | `be-lead-` | Chỉ Triển (máy cá nhân) | `be-lead-week`, `be-lead-review`, `be-lead-contract` |
 | `pm-` | Huy Trường (để dành) | |
