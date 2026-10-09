@@ -11,7 +11,9 @@ Copy-Item .env.example .env.local
 npm run dev                      # mở http://localhost:5173/login
 ```
 
-Tài khoản mẫu (chế độ `VITE_AUTH_MODE=fake`), mật khẩu `Demo@123`: Hội viên `0900000001`, PT `0900000002`, Quầy `0900000003`, Quản trị `0900000004`, bị khóa `0900000009`.
+Đăng nhập bằng số điện thoại. Tài khoản mẫu (chế độ `VITE_AUTH_MODE=fake`, mặc định), mật khẩu `matkhau123` (khớp ví dụ trong openapi): Quản trị `0900000001`, Quầy `0900000002`, PT `0900000003`, Hội viên `0901234567`, bị khóa `0900000009`.
+
+Chạy với mock API (Prism, từ `docs/api/openapi.yaml`): `npm run dev:mock`. Chi tiết: `docs/design/fe-architecture.md`, mục "Chạy với mock và với backend".
 
 ## Cây thư mục
 
@@ -56,5 +58,5 @@ Thư mục chưa có (`api/`, `components/`, `pages/member/`…) sẽ được t
 ## Một màn đi qua những file nào (ví dụ đăng nhập)
 
 1. `app/router.tsx` thấy đường dẫn `/login` → hiện `pages/public/LoginPage.tsx` trong `app/layouts/PublicLayout.tsx`.
-2. Bấm Đăng nhập → `features/auth/AuthProvider.tsx` gọi `fakeAuthApi` (sau 08/10: API thật qua `api/client.ts`).
+2. Bấm Đăng nhập → `features/auth/AuthProvider.tsx` gọi `fakeAuthApi` khi `VITE_AUTH_MODE=fake` (mặc định), hoặc `httpAuthApi` qua `api/client.ts` khi `VITE_AUTH_MODE=http`.
 3. Đăng nhập xong → `app/roles.ts` (`ROLE_HOME`) cho biết trang đầu của vai trò → `app/guards/` kiểm tra quyền → `app/layouts/AppLayout.tsx` vẽ menu từ `app/navigation.tsx`.

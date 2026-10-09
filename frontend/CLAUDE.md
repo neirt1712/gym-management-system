@@ -7,18 +7,18 @@ File này giữ cho hai người code ra cùng một kiểu. Phần giao diện 
 Đã cài (xem `package.json`):
 
 - Chạy: React 18, React Router 6, TanStack Query 5, Ant Design 5 + `@ant-design/icons`, dayjs (timezone `Asia/Ho_Chi_Minh`), openapi-fetch.
-- Công cụ: Vite + `@vitejs/plugin-react`, TypeScript strict, ESLint (typescript-eslint, react-hooks, react-refresh, eslint-config-prettier), Prettier, husky + lint-staged (hook ở `../.husky/pre-commit`), openapi-typescript.
+- Công cụ: Vite + `@vitejs/plugin-react`, TypeScript strict, ESLint (typescript-eslint, react-hooks, react-refresh, eslint-config-prettier), Prettier, husky + lint-staged (hook ở `../.husky/pre-commit`), openapi-typescript, `@stoplight/prism-cli` (mock), `concurrently`.
 - Test: Vitest + jsdom, React Testing Library (`react`, `dom`, `jest-dom`, `user-event`); E2E ở `../tests/e2e` (Playwright).
 - Font Be Vietnam Pro qua Google Fonts `<link>` trong `index.html`. Import tương đối, không dùng alias `@/`.
 
-Cài khi tới việc (đã duyệt, chưa cài): `@stoplight/prism-cli`, `concurrently` (PR lớp API, 08/10); FullCalendar, html5-qrcode, qrcode.react, Recharts (tuần dùng tới).
+Cài khi tới việc (đã duyệt, chưa cài): FullCalendar, html5-qrcode, qrcode.react, Recharts (tuần dùng tới).
 Không thêm thư viện ngoài danh sách này khi chưa hỏi FE Lead (Sơn).
 
 ## Lệnh
 
-- `npm run dev` — chạy app; `VITE_AUTH_MODE=fake` (mặc định trong `.env.example`) đăng nhập bằng tài khoản mẫu, `http` gọi `VITE_API_URL`
-- `npm run dev:mock` — chạy với mock Prism từ `../docs/api/openapi.yaml` (có từ PR lớp API)
-- `npm run gen:api` — sinh `src/api/schema.d.ts` từ openapi.yaml (có từ PR lớp API). Không sửa tay file này.
+- `npm run dev` — chạy app, proxy `/api/v1` tới backend (`VITE_API_URL`); `VITE_AUTH_MODE=fake` (mặc định) đăng nhập bằng tài khoản mẫu, `http` đăng nhập qua API
+- `npm run dev:mock` — chạy Prism (cổng 4010) + Vite, proxy `/api/v1` tới mock từ `../docs/api/openapi.yaml`
+- `npm run gen:api` — sinh `src/api/schema.d.ts` từ openapi.yaml. Không sửa tay file này; chạy lại mỗi khi openapi đổi.
 - `npm run lint`, `npm run typecheck`, `npm run test -- <đường dẫn>`, `npm run build`
 - `npm run format` — Prettier sửa format toàn bộ `src/`; `npm run test:watch` — chạy test liên tục khi sửa
 

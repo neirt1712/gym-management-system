@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mock": "concurrently -k -n mock,web -c cyan,green \"npm:mock\" \"vite --mode mock\"",
+    "mock": "prism mock ../docs/api/openapi.yaml -p 4010",
+    "gen:api": "openapi-typescript ../docs/api/openapi.yaml -o src/api/schema.d.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
@@ -26,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@stoplight/prism-cli": "^5.14.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -34,6 +38,7 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.2.5",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react-hooks": "^5.1.0",
@@ -54,7 +59,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix --max-warnings=0",
+      "eslint --fix --max-warnings=0 --no-warn-ignored",
       "prettier --write"
     ],
     "*.{css,json,md}": [

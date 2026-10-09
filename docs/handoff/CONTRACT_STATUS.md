@@ -13,7 +13,7 @@ Giá trị:
 
 | Nhóm (theo `docs/spec/api-v3.md`) | Số API | openapi | BE | FE | Hẹn BE xong |
 | --- | --- | --- | --- | --- | --- |
-| Xác thực | 7 | v0.1 | Chưa | Chưa | 14/10 (Triển); quên mật khẩu 20/11 (Hồng Anh) |
+| Xác thực | 7 | v0.1 | Chưa | Mock | 14/10 (Triển); quên mật khẩu 20/11 (Hồng Anh) |
 | Hồ sơ | 3 | v0.1 | Chưa | Chưa | 14/10 (Triển) |
 | Gói | 4 | v0.1 | Chưa | Chưa | 16/10 (Hồng Anh) |
 | Đơn hàng | 5 | v0.1 | Chưa | Chưa | 21/10 (Triển) |

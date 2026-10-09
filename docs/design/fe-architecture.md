@@ -19,10 +19,17 @@ component ──> hook (features/<domain>/api.ts, TanStack Query)
 - Access token chỉ giữ trong bộ nhớ (biến trong `AuthProvider`), không lưu `localStorage`. Tải lại trang thì gọi `/auth/refresh` để lấy token mới.
 - Nhiều request cùng gặp 401 thì chỉ gọi refresh 1 lần; các request khác chờ kết quả.
 - Mã HTTP: 401 → refresh; 403 → trang hoặc toast "không có quyền"; 409, 422 → thông điệp theo `error.code`; 429 → thông điệp và khóa nút trong `retryAfterSeconds`.
-- **Trước 08/10** (chưa có openapi): `AuthProvider` dùng interface `AuthApi` với bản giả `fakeAuthApi` (4 tài khoản mẫu, mỗi vai trò một). Có openapi v0.1 thì thay bằng `httpAuthApi`; không đổi component.
-  - Code: `src/features/auth/` (`authApi.ts` là interface, `fakeAuthApi.ts`, `AuthProvider.tsx`, `useAuth`). Chọn bản cài đặt ở `features/auth/index.ts` theo `VITE_AUTH_MODE` (`fake` | `http`).
-  - Tài khoản mẫu, mật khẩu chung `Demo@123`: Hội viên `0900000001`, PT `0900000002`, Quầy `0900000003`, Quản trị `0900000004`, tài khoản bị khóa `0900000009` (thử lỗi `ACCOUNT_LOCKED`).
+- `AuthProvider` dùng interface `AuthApi`, có 2 bản: `fakeAuthApi` (tài khoản mẫu, không cần backend) và `httpAuthApi` (POST `/auth/login`, `/auth/refresh`, `/auth/logout` theo openapi v0.1). Đổi bản không đổi component. `AuthProvider` nối token, refresh và báo hết phiên vào `api/client.ts` (`configureApiAuth`).
+  - Code: `src/features/auth/` (`authApi.ts` là interface, `fakeAuthApi.ts`, `httpAuthApi.ts`, `AuthProvider.tsx`, `useAuth`). Chọn bản cài đặt ở `features/auth/index.ts` theo `VITE_AUTH_MODE` (`fake` mặc định | `http`).
+  - Đăng nhập chỉ bằng số điện thoại (Q12). Tài khoản mẫu khớp ví dụ `POST /auth/login` trong openapi (Q8), mật khẩu chung `matkhau123`: Quản trị `0900000001`, Quầy `0900000002`, PT `0900000003`, Hội viên `0901234567`, bị khóa `0900000009` (thử lỗi `ACCOUNT_LOCKED`). Bản giả dùng cùng id (UUID) với ví dụ openapi. Dữ liệu seed của BE nên dùng cùng bộ SĐT và mật khẩu này.
   - Bản giả nhớ phiên qua `sessionStorage` (chỉ id người dùng, không có token) để mô phỏng refresh cookie; bản thật không dùng storage.
+
+## Chạy với mock và với backend
+
+- FE luôn gọi `/api/v1/...` cùng địa chỉ với trang; Vite proxy chuyển tiếp (`vite.config.ts`), nên không lo CORS và cookie refresh.
+- `npm run dev:mock`: chạy Prism (cổng 4010, từ `docs/api/openapi.yaml`) cùng Vite `--mode mock`; proxy bỏ tiền tố `/api/v1` vì mock không có. Chọn ví dụ response bằng header `Prefer: example=<tên>` (ví dụ `admin`, `staff`, `trainer`, `member` cho đăng nhập). Prism không kiểm cookie thật: luồng refresh chỉ kiểm chứng đầy đủ khi có backend.
+- `npm run dev`: proxy tới backend theo phần gốc của `VITE_API_URL` (mặc định `http://localhost:3000`).
+- `npm run gen:api` sinh lại `src/api/schema.d.ts` mỗi khi `openapi.yaml` đổi (Triển báo qua CHANGELOG; Sơn chạy `/fe-lead-contract`).
 
 ## Bản đồ route
 
