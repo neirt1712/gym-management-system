@@ -4,11 +4,21 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ROLE_HOME } from '../../app/roles';
 import { safeNext } from '../../app/safeNext';
 import { isFakeAuth, useAuth, type LoginInput } from '../../features/auth';
-import { DEMO_PASSWORD } from '../../features/auth/fakeAuthApi';
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../features/auth/fakeAuthApi';
 import { getErrorMessage, getRequestId } from '../../lib/errors';
 import { space } from '../../theme/tokens';
 
-/** UC02 Đăng nhập. */
+/** Khớp schema `Phone` trong docs/api/openapi.yaml. */
+const PHONE_PATTERN = /^0[0-9]{9}$/;
+
+const ROLE_SHORT = { ADMIN: 'Quản trị', STAFF: 'Quầy', TRAINER: 'PT', MEMBER: 'Hội viên' } as const;
+
+/** Tài khoản mẫu hiện trong chế độ thử (bỏ tài khoản bị khóa). */
+const DEMO_HINT = DEMO_ACCOUNTS.filter((a) => !a.locked)
+  .map((a) => `${ROLE_SHORT[a.role]} ${a.phone}`)
+  .join(' · ');
+
+/** UC02 Đăng nhập (chỉ bằng số điện thoại, Q12). */
 export const LoginPage = () => {
   const { status, user, login } = useAuth();
   const navigate = useNavigate();
@@ -56,11 +66,14 @@ export const LoginPage = () => {
 
         <Form<LoginInput> name="login" layout="vertical" requiredMark={false} onFinish={onFinish}>
           <Form.Item
-            label="Số điện thoại hoặc email"
-            name="identifier"
-            rules={[{ required: true, whitespace: true, message: 'Nhập số điện thoại hoặc email.' }]}
+            label="Số điện thoại"
+            name="phone"
+            rules={[
+              { required: true, message: 'Nhập số điện thoại.' },
+              { pattern: PHONE_PATTERN, message: 'Số điện thoại gồm 10 số, bắt đầu bằng 0.' },
+            ]}
           >
-            <Input autoComplete="username" autoFocus />
+            <Input autoComplete="username" inputMode="tel" autoFocus />
           </Form.Item>
           <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: 'Nhập mật khẩu.' }]}>
             <Input.Password autoComplete="current-password" />
@@ -80,7 +93,7 @@ export const LoginPage = () => {
             type="info"
             style={{ marginTop: space.md }}
             message="Chế độ thử, chưa nối backend"
-            description={`Hội viên 0900000001 · PT 0900000002 · Quầy 0900000003 · Quản trị 0900000004 · Mật khẩu ${DEMO_PASSWORD}`}
+            description={`${DEMO_HINT} · Mật khẩu ${DEMO_PASSWORD}`}
           />
         )}
       </Card>

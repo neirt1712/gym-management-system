@@ -11,12 +11,12 @@ describe('route guard', () => {
   });
 
   it('đúng vai trò thì vào được trang', async () => {
-    renderApp('/member', 'u-member');
+    renderApp('/member', 'MEMBER');
     expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument();
   });
 
   it('sai vai trò thì về trang 403', async () => {
-    const router = renderApp('/admin', 'u-staff');
+    const router = renderApp('/admin', 'STAFF');
     expect(await screen.findByText('Bạn không có quyền xem trang này')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/403');
   });
