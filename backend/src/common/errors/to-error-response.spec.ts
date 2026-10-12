@@ -19,7 +19,9 @@ describe('toErrorResponse', () => {
   });
 
   it('lỗi 5xx và lỗi lạ không lộ chi tiết', () => {
-    expect(toErrorResponse(new InternalServerErrorException('db password sai')).body.message).toBe('Lỗi hệ thống');
+    expect(toErrorResponse(new InternalServerErrorException('db password sai')).body.message).toBe(
+      'Lỗi hệ thống',
+    );
     expect(toErrorResponse(new Error('bất ngờ'))).toEqual({
       status: 500,
       body: { code: 'INTERNAL_ERROR', message: 'Lỗi hệ thống', details: null },
@@ -27,7 +29,10 @@ describe('toErrorResponse', () => {
   });
 
   it('JSON sai cú pháp là VALIDATION_ERROR', () => {
-    const parseError = Object.assign(new SyntaxError('Unexpected token'), { type: 'entity.parse.failed', status: 400 });
+    const parseError = Object.assign(new SyntaxError('Unexpected token'), {
+      type: 'entity.parse.failed',
+      status: 400,
+    });
     expect(toErrorResponse(parseError)).toMatchObject({ status: 400, body: { code: 'VALIDATION_ERROR' } });
   });
 });
