@@ -6,6 +6,7 @@ import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { RolesGuard } from './common/auth/roles.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { FEATURE_MODULES } from './modules';
+import { PrismaModule } from './prisma/prisma.module';
 
 /**
  * Mục lục của backend.
@@ -13,7 +14,7 @@ import { FEATURE_MODULES } from './modules';
  * Mọi endpoint mặc định cần đăng nhập; endpoint công khai gắn @Public().
  */
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), AuthCoreModule, ...FEATURE_MODULES],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthCoreModule, ...FEATURE_MODULES],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
