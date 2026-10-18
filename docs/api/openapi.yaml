@@ -12,13 +12,12 @@ openapi: 3.1.0
 
 info:
   title: Gym Management API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     Hợp đồng API giữa backend (NestJS) và frontend (React) của hệ thống quản lý phòng gym.
 
-    **Phiên bản 0.1** gồm 8 nhóm: Xác thực, Hồ sơ, Gói, Đơn hàng, Thanh toán, Check-in,
-    Hội viên, Tài khoản (và `/health`). Các nhóm còn lại (Gói hội viên, PT, Lịch PT,
-    Theo dõi tập, Lớp học, Báo cáo, Thông báo) bổ sung ở bản đủ 74 API (hạn 16/10).
+    **Phiên bản 0.2** đủ 16 nhóm, 74 API theo `docs/spec/api-v3.md`, cộng 2 endpoint theo câu hỏi
+    đã chốt (Q6 tạo lại QR, Q15 đặt lại mật khẩu tại quầy). Chỗ còn chờ trả lời ghi "Chưa chốt (Qxx)".
 
     Nguồn phạm vi: `docs/spec/api-v3.md`, `use-cases-v3.md`, `erd-v3.md`, `decisions.md`.
     Mã lỗi: `docs/api/error-codes.md`. Lịch sử thay đổi: `docs/api/CHANGELOG.md`.
@@ -107,6 +106,13 @@ tags:
       `GET /orders/{id}` (lặp mỗi 2–3 giây, tối đa khoảng 1 phút) để biết đơn đã `PAID` chưa.
 
       **Luồng tiền mặt:** tạo payment CASH → Staff nhận tiền → `POST /payments/{id}/confirm-cash`.
+  - name: Gói hội viên
+    description: |
+      Gói đã mua, sinh ra khi đơn có thanh toán SUCCESS (UC10, UC11). Trạng thái: `ACTIVE` ⇄ `FROZEN`
+      (bảo lưu), `ACTIVE` → `EXPIRED` | `CANCELLED`.
+
+      Số buổi PT **không lưu cột**, BE tính từ lịch: đã tập = COMPLETED + NO_SHOW · đang giữ = PENDING + CONFIRMED ·
+      còn lại = tổng − đã tập · có thể đặt = còn lại − đang giữ.
   - name: Check-in
     description: Ra vào phòng tập (UC16–UC18). Check-in không trừ buổi PT. Mỗi hội viên chỉ có 1 lượt chưa check-out; job 23:59 tự đóng lượt còn mở.
   - name: Hội viên
@@ -115,8 +121,42 @@ tags:
 
       "Khách hàng" và "hội viên" cùng là tài khoản MEMBER; hội viên là người có ít nhất 1 gói ACTIVE.
       API trả sẵn `hasActiveSubscription` để FE phân biệt, không lưu thành cột.
+  - name: PT
+    description: |
+      Hồ sơ huấn luyện viên và khung giờ nhận lịch (UC21, UC22, UC28, UC33). Khách xem không cần đăng nhập.
+
+      "PT phụ trách hội viên" suy ra từ lịch: có lịch PENDING, CONFIRMED hoặc COMPLETED với PT đó (quyết định 16).
+  - name: Lịch PT
+    description: |
+      Lịch tập PT là **thỏa thuận giữa hai bên** (UC23–UC27). Mọi thay đổi là một đề xuất (`kind`):
+      `INITIAL` (yêu cầu đầu), `COUNTER` (đề xuất giờ khác khi lịch còn PENDING), `RESCHEDULE` (xin đổi giờ lịch
+      đã CONFIRMED), `CANCEL` (xin hủy lịch đã CONFIRMED).
+
+      - Mỗi lịch có tối đa 1 đề xuất `OPEN`. Chỉ **bên đang được hỏi** (`awaitingRole`) mới được đồng ý, từ chối
+        hoặc đề xuất giờ khác.
+      - Mọi hành động gửi `expectedVersion` (lấy từ `version` của lịch). Thành công thì `version + 1`; lệch thì
+        `409 STALE_VERSION`, FE tải lại lịch và hiện đề xuất mới nhất.
+      - Đổi hoặc hủy lịch CONFIRMED phải được bên kia đồng ý; trong lúc chờ, lịch cũ giữ nguyên.
+      - FE hiện nút theo `allowedActions` do BE trả, không tự suy luận.
+
+      | Đề xuất | Được đồng ý | Bị từ chối |
+      | --- | --- | --- |
+      | INITIAL, COUNTER (lịch PENDING) | Lịch → CONFIRMED | Lịch → REJECTED, nhả buổi đang giữ |
+      | RESCHEDULE (lịch CONFIRMED) | Giữ CONFIRMED, đổi sang giờ mới | Giữ giờ cũ |
+      | CANCEL (lịch CONFIRMED) | Lịch → CANCELLED, không trừ buổi | Giữ nguyên |
+  - name: Theo dõi tập
+    description: PT phụ trách ghi chú tình trạng, lập kế hoạch và cập nhật tiến độ; hội viên xem của mình (UC29, UC30).
   - name: Tài khoản
     description: Admin quản lý tài khoản Staff, PT, Admin (UC31–UC35).
+  - name: Lớp học
+    description: |
+      Lớp tập nhóm (UC36–UC38). Admin tạo từng buổi; không có lớp lặp tuần (quyết định 15, FE có nút nhân bản).
+      Đăng ký cần gói ACTIVE có quyền vào lớp (`includesClass`), lớp còn chỗ; hủy đăng ký trước hạn hủy
+      (mặc định 120 phút trước giờ học, quyết định 11).
+  - name: Báo cáo
+    description: Doanh thu, thống kê và xuất Excel, chỉ Admin (UC39–UC41). Staff không xem doanh thu (quyết định 19).
+  - name: Thông báo
+    description: Thông báo trong ứng dụng (chuông), của người đang đăng nhập; Admin gửi thông báo chủ động (UC42, UC43).
   - name: Vận hành
     description: Kiểm tra server.
 
@@ -1027,6 +1067,8 @@ paths:
         - BE xử lý theo thứ tự: kiểm chữ ký → tìm payment theo `vnp_TxnRef` (= `merchantRef`) →
           so số tiền (`vnp_Amount` = amount × 100) → nếu thành công thì kích hoạt gói trong một transaction
           (như confirm-cash) → lưu toàn bộ tham số vào `gateway_payload`.
+        - VNPay báo thất bại hoặc người dùng hủy: payment `FAILED`, đơn vẫn `PENDING` (trả lại được), thông báo
+          `PAYMENT_FAILED`, trả `RspCode 00`. Sơ đồ: `docs/design/sequence-diagrams.md`.
         - VNPay có thể gọi lặp: lần sau trả `RspCode 02`, không tạo gói lần hai
           (chặn bằng unique `gateway_txn_id`).
         - **Chưa chốt (Q17):** IPN báo thành công cho payment đã bị chuyển `FAILED` (người dùng bấm thanh toán
@@ -1057,6 +1099,155 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/VnpayIpnResponse' }
               example: { RspCode: '00', Message: Confirm Success }
+
+  # ---------------------------------------------------------------------------
+  # GÓI HỘI VIÊN (4)
+  # ---------------------------------------------------------------------------
+  /subscriptions:
+    get:
+      tags: [Gói hội viên]
+      operationId: listSubscriptions
+      summary: Gói của tôi, lịch sử gói
+      description: |
+        **Quyền:** MEMBER (của mình), STAFF, ADMIN · **UC10**
+
+        - MEMBER: luôn chỉ thấy gói của mình, `memberId` bị bỏ qua.
+        - Không gửi `status` thì trả mọi trạng thái (dùng cho "lịch sử gói"). Lọc nhiều trạng thái:
+          `status=ACTIVE&status=FROZEN`.
+        - Gói PT có `sessions` tính sẵn; gói GYM là `null`.
+        - Sắp xếp: `endsOn` muộn nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/MemberIdQuery'
+        - name: status
+          in: query
+          style: form
+          explode: true
+          description: Một hoặc nhiều trạng thái.
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/SubscriptionStatus' }
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/PackageType' }
+      responses:
+        '200':
+          description: Danh sách gói hội viên.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Subscription' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                SubscriptionPtList: { $ref: '#/components/examples/SubscriptionPtList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /subscriptions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Gói hội viên]
+      operationId: getSubscription
+      summary: Xem chi tiết gói (số buổi theo tháng, bảo lưu)
+      description: |
+        **Quyền:** MEMBER (của mình), STAFF, ADMIN · **UC10**
+
+        - `monthlySessions`: số buổi PT phân bổ theo tháng (theo giờ bắt đầu của lịch, giờ Việt Nam), đủ các tháng
+          từ `startsOn` đến `endsOn`, kể cả tháng không có buổi nào. Gói GYM là mảng rỗng.
+        - `freeze`: thông tin bảo lưu (mỗi gói tối đa 1 lần nên đây cũng là lịch sử bảo lưu); `null` nếu chưa bảo lưu.
+      responses:
+        '200':
+          description: Chi tiết gói hội viên.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionDetail' }
+              examples:
+                SubscriptionPtDetail: { $ref: '#/components/examples/SubscriptionPtDetail' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /subscriptions/{id}/freeze:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Gói hội viên]
+      operationId: freezeSubscription
+      summary: Bảo lưu gói
+      description: |
+        **Quyền:** STAFF, ADMIN · **UC11** · Quyết định 10
+
+        - Chỉ bảo lưu gói `ACTIVE`: khác thì `409 SUBSCRIPTION_NOT_ACTIVE`.
+        - Tối đa **1 lần mỗi gói**, `days` từ 1 đến 30. Bảo lưu bắt đầu từ hôm nay (`freeze.frozenFrom`).
+        - Gói còn lịch PT trong tương lai (PENDING hoặc CONFIRMED): `409 FREEZE_BLOCKED_BY_APPOINTMENTS` kèm
+          `details.appointmentIds`; FE hiện các lịch vướng để hủy hoặc hoàn tất trước.
+        - Thành công: gói `FROZEN`, thông báo cho hội viên, ghi `audit_logs` kèm `reason`.
+        - Trong lúc bảo lưu, gói không dùng được để check-in (`SUBSCRIPTION_FROZEN`), đặt lịch PT hay đăng ký lớp.
+
+        **Chưa chốt (Q21):** mã lỗi khi gói đã bảo lưu 1 lần (Hồng Anh bổ sung vào `error-codes.md`).
+        **Chưa chốt (Q20):** hết số ngày bảo lưu thì gói tự mở lại (cần thêm job) hay chờ Staff mở.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FreezeSubscriptionRequest' }
+            example: { days: 14, reason: Đi công tác 2 tuần }
+      responses:
+        '200':
+          description: Gói sau khi bảo lưu.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionDetail' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Gói không ở trạng thái ACTIVE, hoặc còn lịch PT sắp tới.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                SUBSCRIPTION_NOT_ACTIVE: { $ref: '#/components/examples/ErrSubscriptionNotActive' }
+                FREEZE_BLOCKED_BY_APPOINTMENTS: { $ref: '#/components/examples/ErrFreezeBlockedByAppointments' }
+
+  /subscriptions/{id}/unfreeze:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Gói hội viên]
+      operationId: unfreezeSubscription
+      summary: Mở lại gói đang bảo lưu
+      description: |
+        **Quyền:** STAFF, ADMIN · **UC11** · Quyết định 10
+
+        - Chỉ mở gói `FROZEN`: khác thì `409 SUBSCRIPTION_NOT_FROZEN`.
+        - Gói về `ACTIVE`, `endsOn` được cộng thêm số ngày bảo lưu (BE tính, trả `endsOn` mới).
+        - Thông báo cho hội viên, ghi `audit_logs`.
+
+        **Chưa chốt (Q20):** mở lại sớm hơn số ngày đã đăng ký thì cộng số ngày thực tế đã bảo lưu hay số ngày đã đăng ký.
+      responses:
+        '200':
+          description: Gói sau khi mở lại.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionDetail' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Gói không đang bảo lưu.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                SUBSCRIPTION_NOT_FROZEN: { $ref: '#/components/examples/ErrSubscriptionNotFrozen' }
 
   # ---------------------------------------------------------------------------
   # CHECK-IN (3)
@@ -1348,6 +1539,713 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ---------------------------------------------------------------------------
+  # PT (6)
+  # ---------------------------------------------------------------------------
+  /trainers:
+    get:
+      tags: [PT]
+      operationId: listTrainers
+      summary: Danh sách huấn luyện viên
+      description: |
+        **Quyền:** Public · **UC21**
+
+        - Khách, hội viên chỉ thấy PT `ACTIVE`. Admin thấy cả `INACTIVE` và lọc được theo `status`.
+        - Không trả số điện thoại, email của PT.
+        - Sắp xếp: tên A→Z.
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          description: Tên PT, không phân biệt dấu và hoa thường.
+          schema: { type: string, maxLength: 100 }
+        - name: specialty
+          in: query
+          description: Một chuyên môn, khớp đúng một phần tử trong `specialties`.
+          schema: { type: string, maxLength: 50 }
+        - name: status
+          in: query
+          description: Chỉ Admin dùng được.
+          schema: { $ref: '#/components/schemas/TrainerStatus' }
+      responses:
+        '200':
+          description: Danh sách PT.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Trainer' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                TrainerCuongList: { $ref: '#/components/examples/TrainerCuongList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+
+  /trainers/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [PT]
+      operationId: getTrainer
+      summary: Xem hồ sơ PT
+      description: |
+        **Quyền:** Public · **UC21**
+
+        `id` là `trainers.id`. Hồ sơ PT `INACTIVE` vẫn xem được (mở lại link cũ) nhưng không đặt lịch được.
+      security:
+        - {}
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Hồ sơ PT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Trainer' }
+              examples:
+                TrainerCuong: { $ref: '#/components/examples/TrainerCuong' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [PT]
+      operationId: updateTrainer
+      summary: Sửa hồ sơ, chuyên môn PT hoặc ngừng nhận lịch
+      description: |
+        **Quyền:** ADMIN · **UC33**
+
+        - Chỉ gửi field muốn đổi. `fullName` lưu ở tài khoản (`users`).
+        - `status: INACTIVE`: PT ngừng nhận lịch mới (`POST /appointments` với PT này bị từ chối).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTrainerRequest' }
+            example: { specialties: [Giảm mỡ, Tăng cơ, Yoga], experienceYears: 6 }
+      responses:
+        '200':
+          description: Hồ sơ PT sau khi sửa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Trainer' }
+              examples:
+                TrainerCuong: { $ref: '#/components/examples/TrainerCuong' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /trainers/{id}/availability:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [PT]
+      operationId: getTrainerAvailability
+      summary: Xem khung giờ rảnh của PT
+      description: |
+        **Quyền:** Public · **UC22, UC23**
+
+        - Không gửi `from` thì lấy hôm nay; không gửi `to` thì lấy `from` + 27 ngày (4 tuần). Khoảng tối đa 35 ngày.
+        - `slots`: các khoảng PT nhận lịch. `busy`: các khoảng PT đã bận (lịch CONFIRMED, lớp SCHEDULED), chỉ có giờ,
+          không kèm thông tin hội viên. FE làm mờ ô bận khi hội viên chọn giờ.
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+      responses:
+        '200':
+          description: Khung giờ rảnh và giờ bận trong khoảng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrainerAvailability' }
+              examples:
+                TrainerAvailabilityWeek: { $ref: '#/components/examples/TrainerAvailabilityWeek' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [PT]
+      operationId: replaceTrainerAvailability
+      summary: Thiết lập khung giờ nhận lịch
+      description: |
+        **Quyền:** TRAINER (của mình), ADMIN · **UC22** · Quyết định 14
+
+        - FE cho PT nhập mẫu theo thứ trong tuần, tự sinh các khoảng cho 4 tuần rồi gọi PUT.
+        - BE **thay toàn bộ** khoảng của PT nằm trong `from`..`to` bằng `slots` gửi lên. Ngoài khoảng đó giữ nguyên.
+        - Mỗi khoảng phải nằm trong `from`..`to`, `endsAt` sau `startsAt`, các khoảng không chồng nhau;
+          sai thì `400 VALIDATION_ERROR` (`details[].field` dạng `slots[3].startsAt`).
+        - Đổi khung giờ **không ảnh hưởng** lịch đã có.
+        - PT gửi cho `id` của PT khác: `404 NOT_FOUND` (quy ước "của mình").
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplaceAvailabilityRequest' }
+            example:
+              from: '2026-11-02'
+              to: '2026-11-08'
+              slots:
+                - { startsAt: '2026-11-02T08:00:00+07:00', endsAt: '2026-11-02T12:00:00+07:00' }
+                - { startsAt: '2026-11-04T17:00:00+07:00', endsAt: '2026-11-04T21:00:00+07:00' }
+      responses:
+        '200':
+          description: Khung giờ sau khi thiết lập.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrainerAvailability' }
+              examples:
+                TrainerAvailabilityWeek: { $ref: '#/components/examples/TrainerAvailabilityWeek' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /trainers/{id}/members:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [PT]
+      operationId: listTrainerMembers
+      summary: Hội viên PT đang phụ trách
+      description: |
+        **Quyền:** TRAINER (của mình), ADMIN · **UC28**
+
+        - Hội viên có lịch PENDING, CONFIRMED hoặc COMPLETED với PT này (quyết định 16).
+        - Kèm các gói PT `ACTIVE`, `FROZEN` của hội viên với số buổi tính sẵn, và giờ buổi tập sắp tới với PT này.
+        - PT gọi `id` của PT khác: `404 NOT_FOUND` (quy ước "của mình").
+        - Sắp xếp: buổi sắp tới gần nhất trước; hội viên không có buổi sắp tới xếp sau.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          description: Tên (không dấu), SĐT hoặc mã hội viên.
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: Danh sách hội viên phụ trách.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/TrainerMember' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                TrainerMemberList: { $ref: '#/components/examples/TrainerMemberList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------------------
+  # LỊCH PT (7)
+  # ---------------------------------------------------------------------------
+  /appointments:
+    post:
+      tags: [Lịch PT]
+      operationId: createAppointment
+      summary: Đề xuất lịch tập PT
+      description: |
+        **Quyền:** MEMBER (gói của mình), STAFF, ADMIN (đề xuất hộ hội viên) · **UC23**
+
+        - Tạo lịch `PENDING` kèm đề xuất `INITIAL` đang `OPEN`, chờ PT trả lời (`awaitingRole = TRAINER`).
+          Staff đề xuất hộ thì đề xuất ghi là của bên hội viên (`proposedRole = MEMBER`).
+        - `endsAt` = `startsAt` + số phút mỗi buổi của gói (BE tính).
+        - Điều kiện, sai thì `400 VALIDATION_ERROR`: gói là gói PT `ACTIVE` của hội viên (`subscriptionId`);
+          PT đang `ACTIVE` (`trainerId`); `startsAt` ở tương lai. **Chưa chốt (Q21):** có cần mã lỗi riêng cho hai điều kiện đầu.
+        - Hết buổi có thể đặt: `422 NO_SESSIONS_AVAILABLE`. Giờ nằm ngoài `startsOn`..`endsOn` của gói:
+          `422 OUTSIDE_SUBSCRIPTION_PERIOD`.
+        - Trùng lịch CONFIRMED của PT hoặc hội viên, hoặc trùng lớp của PT: `409 SCHEDULE_CONFLICT`.
+          BE kiểm lại lần quyết định khi đồng ý (`/accept`).
+        - Gửi thông báo cho PT.
+
+        **Chưa chốt (Q20):** giờ đề xuất có bắt buộc nằm trong khung rảnh của PT không. Trong lúc chờ, BE không chặn;
+        FE cho chọn giờ từ `GET /trainers/{id}/availability`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAppointmentRequest' }
+            example:
+              subscriptionId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc
+              trainerId: 66666666-6666-4666-8666-666666666666
+              startsAt: '2026-11-04T18:00:00+07:00'
+              note: Muốn tập chân
+      responses:
+        '201':
+          description: Đã tạo lịch, chờ PT trả lời.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentDetail' }
+              examples:
+                AppointmentPending: { $ref: '#/components/examples/AppointmentPending' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Trùng lịch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                SCHEDULE_CONFLICT: { $ref: '#/components/examples/ErrScheduleConflict' }
+        '422':
+          description: Hết buổi có thể đặt hoặc giờ ngoài thời hạn gói.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                NO_SESSIONS_AVAILABLE: { $ref: '#/components/examples/ErrNoSessionsAvailable' }
+                OUTSIDE_SUBSCRIPTION_PERIOD: { $ref: '#/components/examples/ErrOutsideSubscriptionPeriod' }
+    get:
+      tags: [Lịch PT]
+      operationId: listAppointments
+      summary: Xem lịch PT (ngày, tuần, tháng)
+      description: |
+        **Quyền:** MEMBER (lịch của mình), TRAINER (lịch của mình), STAFF, ADMIN · **UC26**
+
+        - MEMBER chỉ thấy lịch của mình (`memberId` bị bỏ qua); TRAINER chỉ thấy lịch của mình (`trainerId` bị bỏ qua).
+        - `from`, `to` lọc theo ngày của `startsAt`. Lịch FullCalendar nên gửi đúng khoảng đang xem.
+        - Mỗi dòng có `allowedActions` của người gọi, nên lọc "yêu cầu đang chờ tôi" bằng
+          `status=PENDING` rồi xem dòng nào có `ACCEPT`.
+        - Sắp xếp: `startsAt` sớm nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+        - name: status
+          in: query
+          style: form
+          explode: true
+          description: Một hoặc nhiều trạng thái.
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/AppointmentStatus' }
+        - $ref: '#/components/parameters/MemberIdQuery'
+        - name: trainerId
+          in: query
+          description: Lọc theo PT (`trainers.id`). TRAINER bị bỏ qua.
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Danh sách lịch.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Appointment' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                AppointmentConfirmedList: { $ref: '#/components/examples/AppointmentConfirmedList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /appointments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Lịch PT]
+      operationId: getAppointment
+      summary: Xem chi tiết lịch (lịch sử đề xuất, hành động được phép)
+      description: |
+        **Quyền:** MEMBER, TRAINER (lịch của mình), STAFF, ADMIN · **UC24–UC26**
+
+        - `proposals`: mọi đề xuất của lịch, cũ nhất trước (FE vẽ dòng thời gian).
+        - `allowedActions` tính cho người gọi:
+
+        | Tình huống | Ai | allowedActions |
+        | --- | --- | --- |
+        | PENDING | Bên đang được hỏi | `ACCEPT`, `REJECT`, `COUNTER` |
+        | CONFIRMED, chưa tới giờ bắt đầu (Chưa chốt Q20e), không có đề xuất OPEN | Hội viên hoặc PT của lịch | `RESCHEDULE`, `CANCEL` |
+        | CONFIRMED, có đề xuất RESCHEDULE/CANCEL đang OPEN | Bên đang được hỏi | `ACCEPT`, `REJECT` |
+        | CONFIRMED, đã qua giờ kết thúc | PT của lịch, ADMIN | `COMPLETE` |
+        | Còn lại (gồm STAFF) | | `[]` |
+      responses:
+        '200':
+          description: Chi tiết lịch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentDetail' }
+              examples:
+                pending: { $ref: '#/components/examples/AppointmentPending' }
+                confirmed: { $ref: '#/components/examples/AppointmentConfirmed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /appointments/{id}/proposals:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Lịch PT]
+      operationId: createAppointmentProposal
+      summary: Đề xuất giờ khác, xin đổi hoặc xin hủy lịch
+      description: |
+        **Quyền:** hội viên hoặc PT của lịch, khi hành động có trong `allowedActions` · **UC24, UC25**
+
+        - `COUNTER` (lịch PENDING, bên đang được hỏi): đề xuất OPEN cũ → `SUPERSEDED`, đề xuất mới OPEN,
+          `awaitingRole` đổi sang bên kia.
+        - `RESCHEDULE` (lịch CONFIRMED): xin đổi sang `startsAt` mới. Lịch giữ giờ cũ đến khi bên kia đồng ý.
+        - `CANCEL` (lịch CONFIRMED): xin hủy, không gửi `startsAt`. Lịch giữ nguyên đến khi bên kia đồng ý.
+        - `COUNTER`, `RESCHEDULE` bắt buộc `startsAt`; `endsAt` BE tính theo số phút mỗi buổi. Giờ mới ngoài thời hạn gói:
+          `422 OUTSIDE_SUBSCRIPTION_PERIOD`; trùng lịch: `409 SCHEDULE_CONFLICT`.
+        - Thứ tự kiểm: `expectedVersion` lệch → `409 STALE_VERSION`; hành động không có trong `allowedActions` →
+          `403 FORBIDDEN`.
+        - Thành công: `version + 1`, thông báo cho bên kia.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProposalRequest' }
+            examples:
+              counter:
+                summary: PT đề xuất giờ khác
+                value: { kind: COUNTER, startsAt: '2026-11-04T19:00:00+07:00', note: 18h tôi kín lịch, expectedVersion: 1 }
+              reschedule:
+                summary: Hội viên xin đổi giờ lịch đã chốt
+                value: { kind: RESCHEDULE, startsAt: '2026-11-06T18:00:00+07:00', expectedVersion: 2 }
+              cancel:
+                summary: Xin hủy lịch đã chốt
+                value: { kind: CANCEL, note: Bị ốm, expectedVersion: 2 }
+      responses:
+        '201':
+          description: Đã gửi đề xuất; trả lịch sau khi cập nhật.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentDetail' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Lịch vừa bị bên kia cập nhật, hoặc giờ mới bị trùng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                STALE_VERSION: { $ref: '#/components/examples/ErrStaleVersion' }
+                SCHEDULE_CONFLICT: { $ref: '#/components/examples/ErrScheduleConflict' }
+        '422':
+          description: Giờ mới ngoài thời hạn gói.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                OUTSIDE_SUBSCRIPTION_PERIOD: { $ref: '#/components/examples/ErrOutsideSubscriptionPeriod' }
+
+  /appointments/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Lịch PT]
+      operationId: acceptAppointmentProposal
+      summary: Đồng ý đề xuất đang mở
+      description: |
+        **Quyền:** bên đang được hỏi (`allowedActions` có `ACCEPT`) · **UC24, UC25**
+
+        - Áp dụng đề xuất OPEN theo bảng ở tag "Lịch PT".
+        - Với INITIAL, COUNTER, RESCHEDULE: BE khóa dòng PT (`FOR UPDATE`), kiểm trùng lịch CONFIRMED của PT, của hội viên
+          và lớp của PT (`409 SCHEDULE_CONFLICT`), kiểm lại số buổi (`422 NO_SESSIONS_AVAILABLE`).
+        - Thứ tự kiểm: `409 STALE_VERSION` → `403 FORBIDDEN` → trùng lịch, số buổi.
+        - Thành công: `version + 1`, thông báo cho bên kia.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VersionedActionRequest' }
+            example: { expectedVersion: 1 }
+      responses:
+        '200':
+          description: Lịch sau khi đồng ý.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentDetail' }
+              examples:
+                AppointmentConfirmed: { $ref: '#/components/examples/AppointmentConfirmed' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Lịch vừa bị cập nhật, hoặc giờ bị trùng.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                STALE_VERSION: { $ref: '#/components/examples/ErrStaleVersion' }
+                SCHEDULE_CONFLICT: { $ref: '#/components/examples/ErrScheduleConflict' }
+        '422':
+          description: Gói đã hết buổi có thể đặt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                NO_SESSIONS_AVAILABLE: { $ref: '#/components/examples/ErrNoSessionsAvailable' }
+
+  /appointments/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Lịch PT]
+      operationId: rejectAppointmentProposal
+      summary: Từ chối đề xuất đang mở
+      description: |
+        **Quyền:** bên đang được hỏi (`allowedActions` có `REJECT`) · **UC24, UC25**
+
+        - Bắt buộc `reason` (be-plan tuần 5: "reject có lý do"; lưu vào `rejectReason` của đề xuất).
+        - Từ chối INITIAL/COUNTER: lịch `REJECTED`, nhả buổi đang giữ. Từ chối RESCHEDULE/CANCEL: lịch giữ nguyên.
+        - Thứ tự kiểm: `409 STALE_VERSION` → `403 FORBIDDEN`. Thành công: `version + 1`, thông báo cho bên kia.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RejectProposalRequest' }
+            example: { expectedVersion: 1, reason: Tuần này tôi nghỉ phép }
+      responses:
+        '200':
+          description: Lịch sau khi từ chối.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentDetail' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Lịch vừa bị cập nhật.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                STALE_VERSION: { $ref: '#/components/examples/ErrStaleVersion' }
+
+  /appointments/{id}/complete:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Lịch PT]
+      operationId: completeAppointment
+      summary: Xác nhận buổi đã tập hoặc vắng
+      description: |
+        **Quyền:** PT của lịch, ADMIN · **UC27** · Quyết định 3
+
+        - Chỉ lịch `CONFIRMED` và **đã qua `endsAt`**; chưa tới giờ thì `422 SESSION_NOT_ENDED`.
+        - `COMPLETED` (đã tập) hoặc `NO_SHOW` (vắng): **cả hai đều trừ 1 buổi**.
+        - Lưu người xác nhận và thời điểm. Đề xuất RESCHEDULE/CANCEL còn OPEN (nếu có) chuyển `SUPERSEDED` (Chưa chốt Q20i).
+        - Thứ tự kiểm: `409 STALE_VERSION` → `403 FORBIDDEN` → `422 SESSION_NOT_ENDED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompleteAppointmentRequest' }
+            example: { result: COMPLETED, expectedVersion: 2, note: 'Tập tốt, tăng tạ squat' }
+      responses:
+        '200':
+          description: Lịch sau khi xác nhận.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentDetail' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Lịch vừa bị cập nhật.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                STALE_VERSION: { $ref: '#/components/examples/ErrStaleVersion' }
+        '422':
+          description: Buổi tập chưa kết thúc.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                SESSION_NOT_ENDED: { $ref: '#/components/examples/ErrSessionNotEnded' }
+
+  # ---------------------------------------------------------------------------
+  # THEO DÕI TẬP (5)
+  # ---------------------------------------------------------------------------
+  /members/{id}/training-notes:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Theo dõi tập]
+      operationId: listTrainingNotes
+      summary: Ghi chú tình trạng, tiến độ của hội viên
+      description: |
+        **Quyền:** MEMBER (của mình), TRAINER (hội viên mình phụ trách), ADMIN · **UC29**
+
+        - `id` là `members.id`. MEMBER gọi `id` của người khác, PT gọi hội viên không phụ trách: `404 NOT_FOUND`.
+        - Sắp xếp: mới nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: planId
+          in: query
+          description: Chỉ lấy ghi chú gắn với kế hoạch này.
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Danh sách ghi chú.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/TrainingNote' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                TrainingNoteList: { $ref: '#/components/examples/TrainingNoteList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Theo dõi tập]
+      operationId: createTrainingNote
+      summary: Ghi chú tình trạng, cập nhật tiến độ
+      description: |
+        **Quyền:** TRAINER (hội viên mình phụ trách) · **UC29**
+
+        - `planId` (không bắt buộc) phải là kế hoạch của hội viên này.
+        - Có cả `planId` và `progressPercent` thì BE cập nhật luôn `progressPercent` của kế hoạch đó.
+
+        **Chưa chốt (Q20):** Admin có được ghi chú không (api-v3 ghi "Admin" chung cho nhóm). Trong lúc chờ, chỉ PT ghi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTrainingNoteRequest' }
+            example:
+              content: Đầu gối trái hơi đau, giảm tạ squat còn 40kg.
+              planId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+              progressPercent: 35
+      responses:
+        '201':
+          description: Đã ghi chú.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrainingNote' }
+              examples:
+                TrainingNote: { $ref: '#/components/examples/TrainingNote' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /members/{id}/training-plans:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Theo dõi tập]
+      operationId: listTrainingPlans
+      summary: Kế hoạch tập của hội viên
+      description: |
+        **Quyền:** MEMBER (của mình), TRAINER (hội viên mình phụ trách), ADMIN · **UC30**
+
+        `id` là `members.id`. Sắp xếp: cập nhật gần nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Danh sách kế hoạch.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/TrainingPlan' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                TrainingPlanList: { $ref: '#/components/examples/TrainingPlanList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Theo dõi tập]
+      operationId: createTrainingPlan
+      summary: Lập kế hoạch tập
+      description: |
+        **Quyền:** TRAINER (hội viên mình phụ trách) · **UC30**
+
+        Kế hoạch mới có `progressPercent = 0` nếu không gửi. **Chưa chốt (Q20):** Admin có được lập kế hoạch không.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTrainingPlanRequest' }
+            example:
+              title: Giảm 5kg trong 8 tuần
+              exercises:
+                - { name: Squat, sets: 4, reps: 10, weightKg: 50, durationMinutes: null, note: null }
+                - { name: Chạy bộ, sets: null, reps: null, weightKg: null, durationMinutes: 20, note: Nhịp tim 130–150 }
+      responses:
+        '201':
+          description: Đã lập kế hoạch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrainingPlan' }
+              examples:
+                TrainingPlan: { $ref: '#/components/examples/TrainingPlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /training-plans/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Theo dõi tập]
+      operationId: updateTrainingPlan
+      summary: Sửa kế hoạch tập, cập nhật tiến độ
+      description: |
+        **Quyền:** TRAINER đã lập kế hoạch (và vẫn phụ trách hội viên) · **UC30**
+
+        Chỉ gửi field muốn đổi. Gửi `exercises` là **thay cả danh sách**. **Chưa chốt (Q20h):** Admin có được sửa không.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTrainingPlanRequest' }
+            example: { progressPercent: 50 }
+      responses:
+        '200':
+          description: Kế hoạch sau khi sửa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrainingPlan' }
+              examples:
+                TrainingPlan: { $ref: '#/components/examples/TrainingPlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------------------
   # TÀI KHOẢN (6)
   # ---------------------------------------------------------------------------
   /users:
@@ -1465,7 +2363,7 @@ paths:
         **Quyền:** ADMIN · **UC33**
 
         - Chỉ gửi field muốn đổi. `shift` chỉ áp dụng cho STAFF.
-        - Chuyên môn, giới thiệu của PT sửa ở `PATCH /trainers/{id}` (nhóm PT, bản đủ 74 API).
+        - Chuyên môn, giới thiệu của PT sửa ở `PATCH /trainers/{id}`.
         - Không đổi vai trò, trạng thái ở đây (dùng `/role`, `/status`).
       requestBody:
         required: true
@@ -1561,6 +2459,506 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 ROLE_CHANGE_NOT_ALLOWED: { $ref: '#/components/examples/ErrRoleChangeNotAllowed' }
+
+  # ---------------------------------------------------------------------------
+  # LỚP HỌC (7)
+  # ---------------------------------------------------------------------------
+  /classes:
+    get:
+      tags: [Lớp học]
+      operationId: listClasses
+      summary: Danh sách lớp
+      description: |
+        **Quyền:** Public · **UC26, UC37**
+
+        - Không gửi `from` thì lấy từ hôm nay. Khách, hội viên chỉ thấy lớp `SCHEDULED`; Admin thấy cả `CANCELLED`
+          và lọc được theo `status`.
+        - `trainerId`: lịch dạy lớp của một PT (PT xem cùng lịch PT, UC26).
+        - `mine=true`: chỉ lớp hội viên đang đăng ký (màn "Lớp của tôi"); chỉ MEMBER dùng được.
+        - Đã đăng nhập bằng MEMBER thì mỗi lớp có `myEnrollment`; người khác là `null`.
+        - Sắp xếp: `startsAt` sớm nhất trước.
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+        - name: trainerId
+          in: query
+          description: Lọc theo PT dạy lớp (`trainers.id`).
+          schema: { type: string, format: uuid }
+        - name: mine
+          in: query
+          description: "`true` chỉ lớp tôi đang đăng ký (REGISTERED). Chỉ MEMBER."
+          schema: { type: boolean }
+        - name: status
+          in: query
+          description: Chỉ Admin dùng được.
+          schema: { $ref: '#/components/schemas/ClassStatus' }
+      responses:
+        '200':
+          description: Danh sách lớp.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/GymClass' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                GymClassYogaList: { $ref: '#/components/examples/GymClassYogaList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Lớp học]
+      operationId: createClass
+      summary: Tạo lớp
+      description: |
+        **Quyền:** ADMIN · **UC36** · Quyết định 11, 15
+
+        - Tạo từng buổi; nút "nhân bản sang tuần sau" của FE gọi lại endpoint này với giờ mới.
+        - `cancelBeforeMinutes` không gửi thì mặc định 120.
+        - PT dạy lớp trùng lịch CONFIRMED hoặc lớp khác của PT đó: `409 SCHEDULE_CONFLICT` (BE khóa dòng PT khi kiểm).
+        - PT phải đang `ACTIVE`, `startsAt` ở tương lai, `endsAt` sau `startsAt`; sai thì `400 VALIDATION_ERROR`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateClassRequest' }
+            example:
+              name: Yoga buổi tối
+              description: Yoga cơ bản cho người mới.
+              trainerId: 66666666-6666-4666-8666-666666666666
+              capacity: 15
+              startsAt: '2026-11-05T19:00:00+07:00'
+              endsAt: '2026-11-05T20:00:00+07:00'
+              cancelBeforeMinutes: 120
+      responses:
+        '201':
+          description: Đã tạo lớp.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GymClass' }
+              examples:
+                GymClassYoga: { $ref: '#/components/examples/GymClassYoga' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: PT bị trùng lịch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                SCHEDULE_CONFLICT: { $ref: '#/components/examples/ErrScheduleConflict' }
+
+  /classes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Lớp học]
+      operationId: getClass
+      summary: Xem chi tiết lớp
+      description: |
+        **Quyền:** Public · **UC37**
+
+        `cancelDeadline` (hạn hủy đăng ký) BE tính sẵn từ `startsAt` − `cancelBeforeMinutes`.
+      security:
+        - {}
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Chi tiết lớp.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GymClass' }
+              examples:
+                GymClassYoga: { $ref: '#/components/examples/GymClassYoga' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Lớp học]
+      operationId: updateClass
+      summary: Sửa lớp, đổi PT, đổi sức chứa hoặc hủy lớp
+      description: |
+        **Quyền:** ADMIN · **UC36**
+
+        - Chỉ gửi field muốn đổi. Đổi PT hoặc giờ thì kiểm trùng như khi tạo (`409 SCHEDULE_CONFLICT`).
+        - `capacity` không nhỏ hơn số người đang đăng ký: `400 VALIDATION_ERROR` (Chưa chốt Q20i).
+        - Hủy lớp: `status: CANCELLED`, gửi thông báo cho người đã đăng ký (be-plan tuần 7). Không mở lại lớp đã hủy,
+          tạo lớp mới (Chưa chốt Q20i).
+
+        **Chưa chốt (Q20):** khi hủy lớp, các đăng ký `REGISTERED` giữ nguyên hay chuyển `CANCELLED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateClassRequest' }
+            examples:
+              capacity:
+                summary: Tăng sức chứa
+                value: { capacity: 20 }
+              cancel:
+                summary: Hủy lớp
+                value: { status: CANCELLED }
+      responses:
+        '200':
+          description: Lớp sau khi sửa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GymClass' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: PT bị trùng lịch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                SCHEDULE_CONFLICT: { $ref: '#/components/examples/ErrScheduleConflict' }
+
+  /classes/{id}/enrollments:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Lớp học]
+      operationId: enrollClass
+      summary: Đăng ký lớp
+      description: |
+        **Quyền:** MEMBER · **UC37**
+
+        - Không có body. BE khóa dòng lớp (`FOR UPDATE`) khi kiểm chỗ.
+        - Cần gói `ACTIVE` có quyền vào lớp: không có thì `422 NO_CLASS_BENEFIT`.
+        - Lớp đủ chỗ: `409 CLASS_FULL`.
+        - Đã đăng ký rồi (gửi lặp): trả `200` với đăng ký hiện tại.
+
+        **Chưa chốt (Q21):** mã lỗi khi lớp đã hủy hoặc đã bắt đầu (Hồng Anh bổ sung vào `error-codes.md`).
+      responses:
+        '200':
+          description: Đã đăng ký từ trước.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassEnrollment' }
+        '201':
+          description: Đã đăng ký.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassEnrollment' }
+              examples:
+                ClassEnrollmentRegistered: { $ref: '#/components/examples/ClassEnrollmentRegistered' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Lớp đã đủ chỗ.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                CLASS_FULL: { $ref: '#/components/examples/ErrClassFull' }
+        '422':
+          description: Gói không gồm quyền vào lớp.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                NO_CLASS_BENEFIT: { $ref: '#/components/examples/ErrNoClassBenefit' }
+    get:
+      tags: [Lớp học]
+      operationId: listClassEnrollments
+      summary: Danh sách đăng ký của lớp
+      description: |
+        **Quyền:** ADMIN, STAFF, TRAINER dạy lớp này · **UC38**
+
+        - PT không dạy lớp này: `404 NOT_FOUND`.
+        - Không gửi `status` thì trả cả đăng ký đã hủy. Sắp xếp: đăng ký sớm nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/EnrollmentStatus' }
+      responses:
+        '200':
+          description: Danh sách đăng ký.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ClassEnrollment' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                ClassEnrollmentList: { $ref: '#/components/examples/ClassEnrollmentList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /classes/{id}/enrollments/me:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    delete:
+      tags: [Lớp học]
+      operationId: cancelMyClassEnrollment
+      summary: Hủy đăng ký lớp của tôi
+      description: |
+        **Quyền:** MEMBER · **UC37**
+
+        - Chỉ hủy trước `cancelDeadline` của lớp; quá hạn thì `422 CANCELLATION_WINDOW_PASSED`.
+        - Không có đăng ký `REGISTERED` ở lớp này: `404 NOT_FOUND`.
+        - Hủy rồi đăng ký lại thì tạo đăng ký mới.
+      responses:
+        '204':
+          description: Đã hủy đăng ký.
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Đã quá hạn hủy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                CANCELLATION_WINDOW_PASSED: { $ref: '#/components/examples/ErrCancellationWindowPassed' }
+
+  # ---------------------------------------------------------------------------
+  # BÁO CÁO (4)
+  # ---------------------------------------------------------------------------
+  /reports/overview:
+    get:
+      tags: [Báo cáo]
+      operationId: getReportOverview
+      summary: Thống kê tổng quan
+      description: |
+        **Quyền:** ADMIN · **UC40**
+
+        - Không gửi `from`, `to` thì lấy tháng hiện tại.
+        - `totalMembers`: số hội viên có gói ACTIVE **hôm nay** (không phụ thuộc khoảng ngày).
+        - `expiringSoon`: số gói ACTIVE hết hạn trong 7 ngày tới, tính từ hôm nay.
+        - `newMembers`, `checkIns`, `popularPackages` tính trong `from`..`to`. `popularPackages`: tối đa 5 gói nhiều đơn PAID nhất.
+
+        **Chưa chốt (Q20):** "hội viên mới" tính theo đơn PAID đầu tiên trong khoảng hay theo ngày tạo tài khoản.
+      parameters:
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+      responses:
+        '200':
+          description: Số liệu tổng quan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportOverview' }
+              examples:
+                ReportOverviewOctober: { $ref: '#/components/examples/ReportOverviewOctober' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /reports/revenue:
+    get:
+      tags: [Báo cáo]
+      operationId: getReportRevenue
+      summary: Báo cáo doanh thu theo ngày, tháng, năm và theo gói
+      description: |
+        **Quyền:** ADMIN · **UC39** · Quyết định 19
+
+        - Doanh thu = tổng `amount` của payment `SUCCESS`, theo ngày `paidAt` (giờ Việt Nam).
+        - Không gửi `from`, `to` thì lấy tháng hiện tại. `groupBy` mặc định `DAY`.
+        - `series` có đủ mọi kỳ trong khoảng, kỳ không có doanh thu là 0. `period` dạng `YYYY-MM-DD` (DAY),
+          `YYYY-MM` (MONTH), `YYYY` (YEAR).
+      parameters:
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+        - name: groupBy
+          in: query
+          schema: { $ref: '#/components/schemas/ReportGroupBy' }
+      responses:
+        '200':
+          description: Doanh thu.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RevenueReport' }
+              examples:
+                RevenueReportByMonth: { $ref: '#/components/examples/RevenueReportByMonth' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /reports/expiring-subscriptions:
+    get:
+      tags: [Báo cáo]
+      operationId: listExpiringSubscriptions
+      summary: Gói sắp hết hạn
+      description: |
+        **Quyền:** ADMIN · **UC40**
+
+        Gói `ACTIVE` có `endsOn` trong `days` ngày tới (tính cả hôm nay), mặc định 7. Sắp xếp: hết hạn sớm nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: days
+          in: query
+          description: Số ngày tới.
+          schema: { type: integer, minimum: 1, maximum: 90, default: 7 }
+      responses:
+        '200':
+          description: Danh sách gói sắp hết hạn.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Subscription' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+              examples:
+                SubscriptionPtList: { $ref: '#/components/examples/SubscriptionPtList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /reports/export:
+    get:
+      tags: [Báo cáo]
+      operationId: exportReport
+      summary: Xuất báo cáo Excel
+      description: |
+        **Quyền:** ADMIN · **UC41**
+
+        - `report` chọn báo cáo; các tham số khác giống endpoint báo cáo tương ứng.
+        - Trả file `.xlsx`. FE tải bằng `fetch` (kèm header `Authorization`) rồi lưu blob; tên file lấy từ
+          header `Content-Disposition`.
+        - Tên cột trong file bằng tiếng Việt (quyết định 18).
+      parameters:
+        - name: report
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [overview, revenue, expiring-subscriptions]
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+        - name: groupBy
+          in: query
+          description: Chỉ dùng với `report=revenue`.
+          schema: { $ref: '#/components/schemas/ReportGroupBy' }
+        - name: days
+          in: query
+          description: Chỉ dùng với `report=expiring-subscriptions`.
+          schema: { type: integer, minimum: 1, maximum: 90, default: 7 }
+      responses:
+        '200':
+          description: File Excel.
+          headers:
+            Content-Disposition:
+              description: Tên file, ví dụ `attachment; filename="doanh-thu_2026-10-01_2026-10-31.xlsx"`.
+              schema: { type: string }
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------------------------------------------------------------------------
+  # THÔNG BÁO (3)
+  # ---------------------------------------------------------------------------
+  /notifications:
+    get:
+      tags: [Thông báo]
+      operationId: listNotifications
+      summary: Thông báo của tôi
+      description: |
+        **Quyền:** Đã đăng nhập (của mình) · **UC42**
+
+        - `meta.unreadCount`: tổng số chưa đọc (không phụ thuộc bộ lọc), dùng cho số trên chuông.
+        - Sắp xếp: mới nhất trước.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: isRead
+          in: query
+          description: "`false` chỉ lấy thông báo chưa đọc."
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Danh sách thông báo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Notification' }
+                  meta: { $ref: '#/components/schemas/NotificationPageMeta' }
+              examples:
+                NotificationList: { $ref: '#/components/examples/NotificationList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /notifications/{id}/read:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Thông báo]
+      operationId: markNotificationRead
+      summary: Đánh dấu đã đọc
+      description: |
+        **Quyền:** Đã đăng nhập (thông báo của mình) · **UC42**
+
+        Không có body. Gửi lặp khi đã đọc: trả `200` với thông báo hiện tại.
+      responses:
+        '200':
+          description: Thông báo sau khi đánh dấu.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Notification' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /notifications/broadcast:
+    post:
+      tags: [Thông báo]
+      operationId: broadcastNotification
+      summary: Gửi thông báo chủ động
+      description: |
+        **Quyền:** ADMIN · **UC43** · Quyết định 2 (chỉ trong ứng dụng)
+
+        - Gửi cho mọi tài khoản `ACTIVE` thuộc các vai trò trong `roles`.
+        - Trả số người nhận.
+
+        **Chưa chốt (Q20):** chọn người nhận theo vai trò, hay cần thêm nhóm "hội viên có gói ACTIVE".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BroadcastRequest' }
+            example:
+              title: Nghỉ lễ 20/11
+              body: Phòng tập đóng cửa ngày 20/11. Chúc quý hội viên ngày lễ vui vẻ.
+              roles: [MEMBER]
+      responses:
+        '202':
+          description: Đã tạo thông báo cho người nhận.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BroadcastResponse' }
+              example: { recipientCount: 30 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ---------------------------------------------------------------------------
   # VẬN HÀNH (1)
@@ -1771,6 +3169,41 @@ components:
       type: string
       enum: [SELF, STAFF, AUTO]
       description: SELF hội viên tự check-out · STAFF nhân viên làm hộ · AUTO job 23:59 tự đóng.
+    AppointmentStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, REJECTED, CANCELLED, COMPLETED, NO_SHOW]
+      description: |
+        PENDING đang thương lượng · CONFIRMED đã chốt · REJECTED bị từ chối · CANCELLED đã hủy (không trừ buổi) ·
+        COMPLETED đã tập · NO_SHOW vắng (vẫn trừ 1 buổi).
+    PartyRole:
+      type: string
+      enum: [MEMBER, TRAINER]
+      description: Một trong hai bên của lịch PT.
+    ProposalKind:
+      type: string
+      enum: [INITIAL, COUNTER, RESCHEDULE, CANCEL]
+      description: INITIAL yêu cầu đầu · COUNTER đề xuất giờ khác · RESCHEDULE xin đổi lịch đã chốt · CANCEL xin hủy lịch đã chốt.
+    ProposalStatus:
+      type: string
+      enum: [OPEN, ACCEPTED, REJECTED, SUPERSEDED]
+      description: OPEN đang chờ trả lời · ACCEPTED được đồng ý · REJECTED bị từ chối · SUPERSEDED bị thay bằng đề xuất khác.
+    AppointmentAction:
+      type: string
+      enum: [ACCEPT, REJECT, COUNTER, RESCHEDULE, CANCEL, COMPLETE]
+      description: Hành động người gọi được làm trên lịch; FE hiện nút theo danh sách này.
+    ClassStatus:
+      type: string
+      enum: [SCHEDULED, CANCELLED]
+      description: SCHEDULED sắp diễn ra hoặc đã diễn ra · CANCELLED Admin đã hủy.
+    EnrollmentStatus:
+      type: string
+      enum: [REGISTERED, CANCELLED]
+      description: REGISTERED đang đăng ký · CANCELLED đã hủy.
+    ReportGroupBy:
+      type: string
+      enum: [DAY, MONTH, YEAR]
+      default: DAY
+      description: Gộp doanh thu theo ngày, tháng hoặc năm.
     ErrorCode:
       type: string
       description: Mã lỗi. Danh mục, HTTP status và câu hiển thị ở `docs/api/error-codes.md`.
@@ -1829,6 +3262,7 @@ components:
                 - `PENDING_ORDER_EXISTS`: `{ orderId }`. `PHONE_DUPLICATED`: `{ memberId }` (nếu có).
                 - `ACCOUNT_TEMPORARILY_LOCKED`, `RATE_LIMITED`: `{ retryAfterSeconds }`.
                 - `ALREADY_CHECKED_IN`: `{ checkInId }`. `CASH_AMOUNT_MISMATCH`: `{ expectedAmount }`.
+                - `FREEZE_BLOCKED_BY_APPOINTMENTS`: `{ appointmentIds }`.
                 - Mã khác: `null`.
               oneOf:
                 - type: 'null'
@@ -2342,7 +3776,7 @@ components:
             - type: 'null'
       additionalProperties: false
 
-    # ----- Gói hội viên (bản rút gọn; đầy đủ ở nhóm Gói hội viên, bản 74 API) -----
+    # ----- Gói hội viên -----
     SessionCounts:
       type: object
       description: |
@@ -2372,6 +3806,341 @@ components:
           oneOf:
             - $ref: '#/components/schemas/SessionCounts'
             - type: 'null'
+    Subscription:
+      type: object
+      description: Một gói hội viên (dòng trong danh sách).
+      required: [id, member, package, orderId, packageName, type, startsOn, endsOn, daysLeft, status, includesClass, sessionMinutes, sessions, freeze]
+      properties:
+        id: { type: string, format: uuid }
+        member: { $ref: '#/components/schemas/MemberRef' }
+        package: { $ref: '#/components/schemas/PackageRef' }
+        orderId: { type: string, format: uuid, description: Đơn đã sinh ra gói này. }
+        packageName: { type: string, description: 'Tên gói lúc mua (chụp lại, không đổi khi Admin sửa gói).' }
+        type: { $ref: '#/components/schemas/PackageType' }
+        startsOn: { $ref: '#/components/schemas/DateOnly' }
+        endsOn:
+          $ref: '#/components/schemas/DateOnly'
+          description: Ngày cuối còn hiệu lực (tính cả ngày này), đã cộng ngày bảo lưu nếu có.
+        daysLeft:
+          type: integer
+          minimum: 0
+          description: Số ngày từ hôm nay đến `endsOn`, tính cả hai đầu; 0 khi đã qua `endsOn`.
+        status: { $ref: '#/components/schemas/SubscriptionStatus' }
+        includesClass: { type: boolean }
+        sessionMinutes: { type: [integer, 'null'], description: Số phút mỗi buổi PT. `null` với gói GYM. }
+        sessions:
+          description: Chỉ gói PT có; gói GYM là `null`.
+          oneOf:
+            - $ref: '#/components/schemas/SessionCounts'
+            - type: 'null'
+        freeze:
+          description: Thông tin bảo lưu; `null` nếu chưa bảo lưu.
+          oneOf:
+            - $ref: '#/components/schemas/FreezeInfo'
+            - type: 'null'
+    SubscriptionDetail:
+      allOf:
+        - $ref: '#/components/schemas/Subscription'
+        - type: object
+          required: [monthlySessions]
+          properties:
+            monthlySessions:
+              type: array
+              description: Số buổi PT theo tháng (UC10). Gói GYM là mảng rỗng.
+              items: { $ref: '#/components/schemas/MonthlySessions' }
+    MonthlySessions:
+      type: object
+      required: [month, completed, noShow, upcoming]
+      properties:
+        month: { type: string, pattern: '^[0-9]{4}-[0-9]{2}$', description: 'Tháng, dạng `YYYY-MM`.', examples: ['2026-10'] }
+        completed: { type: integer, minimum: 0, description: Số buổi COMPLETED. }
+        noShow: { type: integer, minimum: 0, description: Số buổi NO_SHOW (vẫn trừ buổi). }
+        upcoming: { type: integer, minimum: 0, description: Số buổi PENDING + CONFIRMED. }
+    FreezeInfo:
+      type: object
+      required: [frozenFrom, frozenDays, frozenUntil, reason]
+      properties:
+        frozenFrom: { $ref: '#/components/schemas/DateOnly' }
+        frozenDays: { type: integer, minimum: 1, maximum: 30 }
+        frozenUntil:
+          $ref: '#/components/schemas/DateOnly'
+          description: Ngày cuối của kỳ bảo lưu (BE tính).
+        reason: { type: string }
+    FreezeSubscriptionRequest:
+      type: object
+      required: [days, reason]
+      properties:
+        days: { type: integer, minimum: 1, maximum: 30, description: 'Số ngày bảo lưu, tối đa 30.' }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+      additionalProperties: false
+
+    # ----- PT -----
+    Trainer:
+      type: object
+      description: Hồ sơ PT công khai (không có SĐT, email).
+      required: [id, userId, fullName, avatarUrl, specialties, bio, experienceYears, status]
+      properties:
+        id: { type: string, format: uuid, description: '`trainers.id`' }
+        userId: { type: string, format: uuid, description: '`users.id`' }
+        fullName: { type: string }
+        avatarUrl: { type: [string, 'null'] }
+        specialties: { type: array, items: { type: string } }
+        bio: { type: [string, 'null'] }
+        experienceYears: { type: [integer, 'null'], minimum: 0 }
+        status: { $ref: '#/components/schemas/TrainerStatus' }
+    UpdateTrainerRequest:
+      type: object
+      minProperties: 1
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        specialties: { type: array, items: { type: string, maxLength: 50 }, maxItems: 10 }
+        bio: { type: [string, 'null'], maxLength: 1000 }
+        experienceYears: { type: [integer, 'null'], minimum: 0, maximum: 60 }
+        status: { $ref: '#/components/schemas/TrainerStatus' }
+      additionalProperties: false
+    TimeRange:
+      type: object
+      required: [startsAt, endsAt]
+      properties:
+        startsAt: { $ref: '#/components/schemas/DateTime' }
+        endsAt: { $ref: '#/components/schemas/DateTime' }
+    AvailabilitySlot:
+      allOf:
+        - type: object
+          required: [id]
+          properties:
+            id: { type: string, format: uuid }
+        - $ref: '#/components/schemas/TimeRange'
+    TrainerAvailability:
+      type: object
+      required: [trainerId, from, to, slots, busy]
+      properties:
+        trainerId: { type: string, format: uuid }
+        from: { $ref: '#/components/schemas/DateOnly' }
+        to: { $ref: '#/components/schemas/DateOnly' }
+        slots:
+          type: array
+          description: Khoảng PT nhận lịch, sớm nhất trước.
+          items: { $ref: '#/components/schemas/AvailabilitySlot' }
+        busy:
+          type: array
+          description: Khoảng PT đã bận (lịch CONFIRMED, lớp SCHEDULED), không kèm thông tin hội viên.
+          items: { $ref: '#/components/schemas/TimeRange' }
+    ReplaceAvailabilityRequest:
+      type: object
+      required: [from, to, slots]
+      properties:
+        from: { $ref: '#/components/schemas/DateOnly' }
+        to: { $ref: '#/components/schemas/DateOnly' }
+        slots:
+          type: array
+          maxItems: 200
+          description: Gửi mảng rỗng để xóa hết khung giờ trong khoảng.
+          items: { $ref: '#/components/schemas/TimeRange' }
+      additionalProperties: false
+    TrainerMember:
+      type: object
+      required: [member, subscriptions, nextAppointmentAt]
+      properties:
+        member: { $ref: '#/components/schemas/MemberRef' }
+        subscriptions:
+          type: array
+          description: Gói PT ACTIVE và FROZEN của hội viên, kèm số buổi.
+          items: { $ref: '#/components/schemas/SubscriptionSummary' }
+        nextAppointmentAt:
+          description: Giờ bắt đầu buổi PENDING/CONFIRMED sắp tới gần nhất với PT này.
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+
+    # ----- Lịch PT -----
+    Appointment:
+      type: object
+      required: [id, member, trainer, subscription, status, awaitingRole, version, startsAt, endsAt, note, openProposal, completedBy, completedAt, allowedActions]
+      properties:
+        id: { type: string, format: uuid }
+        member: { $ref: '#/components/schemas/MemberRef' }
+        trainer: { $ref: '#/components/schemas/TrainerRef' }
+        subscription:
+          type: object
+          required: [id, packageName]
+          properties:
+            id: { type: string, format: uuid }
+            packageName: { type: string }
+        status: { $ref: '#/components/schemas/AppointmentStatus' }
+        awaitingRole:
+          description: Bên đang được hỏi; `null` khi không có đề xuất OPEN.
+          oneOf:
+            - $ref: '#/components/schemas/PartyRole'
+            - type: 'null'
+        version: { type: integer, minimum: 1, description: Gửi lại làm `expectedVersion` cho mọi hành động. }
+        startsAt: { $ref: '#/components/schemas/DateTime' }
+        endsAt: { $ref: '#/components/schemas/DateTime' }
+        note: { type: [string, 'null'], description: Ghi chú của lịch (khi tạo hoặc khi PT xác nhận buổi). }
+        openProposal:
+          description: Đề xuất đang chờ trả lời; `null` nếu không có.
+          oneOf:
+            - $ref: '#/components/schemas/Proposal'
+            - type: 'null'
+        completedBy:
+          description: Người xác nhận buổi (PT hoặc Admin).
+          oneOf:
+            - $ref: '#/components/schemas/UserRef'
+            - type: 'null'
+        completedAt:
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        allowedActions:
+          type: array
+          description: Hành động người gọi được làm lúc này (bảng ở `GET /appointments/{id}`).
+          items: { $ref: '#/components/schemas/AppointmentAction' }
+    AppointmentDetail:
+      allOf:
+        - $ref: '#/components/schemas/Appointment'
+        - type: object
+          required: [proposals]
+          properties:
+            proposals:
+              type: array
+              description: Mọi đề xuất của lịch, cũ nhất trước.
+              items: { $ref: '#/components/schemas/Proposal' }
+    Proposal:
+      type: object
+      required: [id, kind, proposedBy, proposedRole, startsAt, endsAt, note, status, rejectReason, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/ProposalKind' }
+        proposedBy:
+          description: Người gửi (có thể là Staff đề xuất hộ hội viên).
+          allOf:
+            - $ref: '#/components/schemas/UserRef'
+        proposedRole: { $ref: '#/components/schemas/PartyRole' }
+        startsAt:
+          description: Giờ đề xuất; `null` với CANCEL.
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        endsAt:
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        note: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/ProposalStatus' }
+        rejectReason: { type: [string, 'null'] }
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+    CreateAppointmentRequest:
+      type: object
+      required: [subscriptionId, trainerId, startsAt]
+      properties:
+        subscriptionId: { type: string, format: uuid, description: Gói PT ACTIVE dùng buổi. Hội viên suy ra từ gói. }
+        trainerId: { type: string, format: uuid, description: '`trainers.id`' }
+        startsAt: { $ref: '#/components/schemas/DateTime' }
+        note: { type: [string, 'null'], maxLength: 500 }
+      additionalProperties: false
+    CreateProposalRequest:
+      type: object
+      required: [kind, expectedVersion]
+      properties:
+        kind:
+          type: string
+          enum: [COUNTER, RESCHEDULE, CANCEL]
+        startsAt:
+          $ref: '#/components/schemas/DateTime'
+          description: Bắt buộc với COUNTER, RESCHEDULE; không gửi với CANCEL.
+        note: { type: [string, 'null'], maxLength: 500 }
+        expectedVersion: { type: integer, minimum: 1 }
+      additionalProperties: false
+    VersionedActionRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+      additionalProperties: false
+    RejectProposalRequest:
+      type: object
+      required: [expectedVersion, reason]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+      additionalProperties: false
+    CompleteAppointmentRequest:
+      type: object
+      required: [result, expectedVersion]
+      properties:
+        result:
+          type: string
+          enum: [COMPLETED, NO_SHOW]
+        note: { type: [string, 'null'], maxLength: 500 }
+        expectedVersion: { type: integer, minimum: 1 }
+      additionalProperties: false
+
+    # ----- Theo dõi tập -----
+    Exercise:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        sets: { type: [integer, 'null'], minimum: 1 }
+        reps: { type: [integer, 'null'], minimum: 1 }
+        weightKg: { type: [number, 'null'], minimum: 0 }
+        durationMinutes: { type: [integer, 'null'], minimum: 1 }
+        note: { type: [string, 'null'], maxLength: 300 }
+      additionalProperties: false
+    TrainingPlan:
+      type: object
+      required: [id, memberId, trainer, title, exercises, progressPercent, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        memberId: { type: string, format: uuid, description: '`members.id`' }
+        trainer: { $ref: '#/components/schemas/TrainerRef' }
+        title: { type: string }
+        exercises: { type: array, items: { $ref: '#/components/schemas/Exercise' } }
+        progressPercent: { type: integer, minimum: 0, maximum: 100 }
+        updatedAt: { $ref: '#/components/schemas/DateTime' }
+    CreateTrainingPlanRequest:
+      type: object
+      required: [title, exercises]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        exercises: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Exercise' } }
+        progressPercent: { type: integer, minimum: 0, maximum: 100, default: 0 }
+      additionalProperties: false
+    UpdateTrainingPlanRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        exercises: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Exercise' } }
+        progressPercent: { type: integer, minimum: 0, maximum: 100 }
+      additionalProperties: false
+    TrainingNote:
+      type: object
+      required: [id, memberId, trainer, plan, content, progressPercent, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        memberId: { type: string, format: uuid, description: '`members.id`' }
+        trainer: { $ref: '#/components/schemas/TrainerRef' }
+        plan:
+          description: Kế hoạch được gắn; `null` nếu ghi chú chung.
+          oneOf:
+            - type: object
+              required: [id, title]
+              properties:
+                id: { type: string, format: uuid }
+                title: { type: string }
+            - type: 'null'
+        content: { type: string }
+        progressPercent: { type: [integer, 'null'], minimum: 0, maximum: 100 }
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+    CreateTrainingNoteRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 2000 }
+        planId: { type: [string, 'null'], format: uuid }
+        progressPercent: { type: [integer, 'null'], minimum: 0, maximum: 100 }
+      additionalProperties: false
 
     # ----- Tài khoản -----
     User:
@@ -2451,6 +4220,172 @@ components:
         reason: { type: string, minLength: 1, maxLength: 500 }
       additionalProperties: false
 
+    # ----- Lớp học -----
+    GymClass:
+      type: object
+      description: Một buổi lớp (tên schema tránh từ khóa `class`).
+      required: [id, name, description, trainer, capacity, enrolledCount, availableSlots, startsAt, endsAt, cancelBeforeMinutes, cancelDeadline, status, myEnrollment]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        trainer: { $ref: '#/components/schemas/TrainerRef' }
+        capacity: { type: integer, minimum: 1 }
+        enrolledCount: { type: integer, minimum: 0, description: Số đăng ký REGISTERED. }
+        availableSlots: { type: integer, minimum: 0, description: capacity − enrolledCount. }
+        startsAt: { $ref: '#/components/schemas/DateTime' }
+        endsAt: { $ref: '#/components/schemas/DateTime' }
+        cancelBeforeMinutes: { type: integer, minimum: 0 }
+        cancelDeadline:
+          $ref: '#/components/schemas/DateTime'
+          description: Hạn hủy đăng ký = startsAt − cancelBeforeMinutes (BE tính).
+        status: { $ref: '#/components/schemas/ClassStatus' }
+        myEnrollment:
+          description: Đăng ký REGISTERED của hội viên đang đăng nhập; `null` nếu chưa đăng ký hoặc không phải MEMBER.
+          oneOf:
+            - type: object
+              required: [id, createdAt]
+              properties:
+                id: { type: string, format: uuid }
+                createdAt: { $ref: '#/components/schemas/DateTime' }
+            - type: 'null'
+    CreateClassRequest:
+      type: object
+      required: [name, trainerId, capacity, startsAt, endsAt]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        trainerId: { type: string, format: uuid, description: '`trainers.id`' }
+        capacity: { type: integer, minimum: 1, maximum: 200 }
+        startsAt: { $ref: '#/components/schemas/DateTime' }
+        endsAt: { $ref: '#/components/schemas/DateTime' }
+        cancelBeforeMinutes: { type: integer, minimum: 0, maximum: 1440, default: 120 }
+      additionalProperties: false
+    UpdateClassRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        trainerId: { type: string, format: uuid }
+        capacity: { type: integer, minimum: 1, maximum: 200 }
+        startsAt: { $ref: '#/components/schemas/DateTime' }
+        endsAt: { $ref: '#/components/schemas/DateTime' }
+        cancelBeforeMinutes: { type: integer, minimum: 0, maximum: 1440 }
+        status:
+          type: string
+          enum: [CANCELLED]
+          description: Chỉ dùng để hủy lớp.
+      additionalProperties: false
+    ClassEnrollment:
+      type: object
+      required: [id, classId, member, status, createdAt, cancelledAt]
+      properties:
+        id: { type: string, format: uuid }
+        classId: { type: string, format: uuid }
+        member: { $ref: '#/components/schemas/MemberRef' }
+        status: { $ref: '#/components/schemas/EnrollmentStatus' }
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+        cancelledAt:
+          oneOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+
+    # ----- Báo cáo -----
+    ReportOverview:
+      type: object
+      required: [from, to, totalMembers, newMembers, expiringSoon, checkIns, popularPackages]
+      properties:
+        from: { $ref: '#/components/schemas/DateOnly' }
+        to: { $ref: '#/components/schemas/DateOnly' }
+        totalMembers: { type: integer, minimum: 0, description: Số hội viên có gói ACTIVE hôm nay. }
+        newMembers: { type: integer, minimum: 0, description: Số hội viên mới trong khoảng (định nghĩa chờ Q20). }
+        expiringSoon: { type: integer, minimum: 0, description: Số gói ACTIVE hết hạn trong 7 ngày tới. }
+        checkIns: { type: integer, minimum: 0, description: Số lượt check-in trong khoảng. }
+        popularPackages:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/PackageSales' }
+    PackageSales:
+      type: object
+      required: [package, paidOrders, revenue]
+      properties:
+        package: { $ref: '#/components/schemas/PackageRef' }
+        paidOrders: { type: integer, minimum: 0 }
+        revenue: { $ref: '#/components/schemas/Money' }
+    RevenueReport:
+      type: object
+      required: [from, to, groupBy, totalAmount, paymentCount, series, byPackage]
+      properties:
+        from: { $ref: '#/components/schemas/DateOnly' }
+        to: { $ref: '#/components/schemas/DateOnly' }
+        groupBy: { $ref: '#/components/schemas/ReportGroupBy' }
+        totalAmount: { $ref: '#/components/schemas/Money' }
+        paymentCount: { type: integer, minimum: 0 }
+        series:
+          type: array
+          items:
+            type: object
+            required: [period, amount, paymentCount]
+            properties:
+              period: { type: string, description: '`YYYY-MM-DD`, `YYYY-MM` hoặc `YYYY` theo `groupBy`.' }
+              amount: { $ref: '#/components/schemas/Money' }
+              paymentCount: { type: integer, minimum: 0 }
+        byPackage:
+          type: array
+          description: Doanh thu theo gói, nhiều nhất trước.
+          items:
+            type: object
+            required: [package, amount, paymentCount]
+            properties:
+              package: { $ref: '#/components/schemas/PackageRef' }
+              amount: { $ref: '#/components/schemas/Money' }
+              paymentCount: { type: integer, minimum: 0 }
+
+    # ----- Thông báo -----
+    Notification:
+      type: object
+      required: [id, type, title, body, targetType, targetId, isRead, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type:
+          type: string
+          description: |
+            Loại thông báo, ví dụ `PAYMENT_SUCCESS`, `PAYMENT_FAILED`, `SUBSCRIPTION_EXPIRING`, `BROADCAST`.
+            Danh sách đủ chốt khi làm module thông báo (Hồng Anh). FE hiển thị `title`, `body`; chỉ dùng `type` để chọn biểu tượng.
+        title: { type: string }
+        body: { type: string }
+        targetType:
+          type: [string, 'null']
+          description: Loại đối tượng liên quan để FE mở màn, ví dụ `ORDER`, `SUBSCRIPTION`, `APPOINTMENT`, `CLASS`.
+        targetId: { type: [string, 'null'], format: uuid }
+        isRead: { type: boolean }
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+    NotificationPageMeta:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [unreadCount]
+          properties:
+            unreadCount: { type: integer, minimum: 0, description: Tổng số thông báo chưa đọc của tôi. }
+    BroadcastRequest:
+      type: object
+      required: [title, body, roles]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 100 }
+        body: { type: string, minLength: 1, maxLength: 1000 }
+        roles:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Role' }
+      additionalProperties: false
+    BroadcastResponse:
+      type: object
+      required: [recipientCount]
+      properties:
+        recipientCount: { type: integer, minimum: 0 }
+
     # ----- Tham chiếu rút gọn (nhúng trong object khác) -----
     UserRef:
       type: object
@@ -2466,6 +4401,13 @@ components:
         memberCode: { type: string }
         fullName: { type: string }
         phone: { $ref: '#/components/schemas/Phone' }
+        avatarUrl: { type: [string, 'null'] }
+    TrainerRef:
+      type: object
+      required: [id, fullName, avatarUrl]
+      properties:
+        id: { type: string, format: uuid, description: '`trainers.id`' }
+        fullName: { type: string }
         avatarUrl: { type: [string, 'null'] }
     PackageRef:
       type: object
@@ -2763,6 +4705,188 @@ components:
         trainer: { id: 66666666-6666-4666-8666-666666666666, specialties: [Giảm mỡ, Tăng cơ], bio: 5 năm kinh nghiệm huấn luyện thể hình., experienceYears: 5, status: ACTIVE }
         createdAt: '2026-09-01T08:00:00+07:00'
 
+    # ----- Gói hội viên -----
+    SubscriptionPtDetail:
+      summary: Gói PT kèm số buổi theo tháng
+      value:
+        id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        package: { id: 88888888-8888-4888-8888-888888888888, name: PT 12 buổi, type: PT }
+        orderId: 99999999-9999-4999-8999-99999999999a
+        packageName: PT 12 buổi
+        type: PT
+        startsOn: '2026-10-01'
+        endsOn: '2026-11-30'
+        daysLeft: 44
+        status: ACTIVE
+        includesClass: true
+        sessionMinutes: 60
+        sessions: { total: 12, used: 3, held: 2, remaining: 9, bookable: 7 }
+        freeze: null
+        monthlySessions:
+          - { month: '2026-10', completed: 2, noShow: 1, upcoming: 0 }
+          - { month: '2026-11', completed: 0, noShow: 0, upcoming: 2 }
+    # ----- PT -----
+    TrainerCuong:
+      summary: Hồ sơ PT
+      value: &TrainerCuong
+        id: 66666666-6666-4666-8666-666666666666
+        userId: 33333333-3333-4333-8333-333333333333
+        fullName: Lê Minh Cường
+        avatarUrl: null
+        specialties: [Giảm mỡ, Tăng cơ]
+        bio: 5 năm kinh nghiệm huấn luyện thể hình.
+        experienceYears: 5
+        status: ACTIVE
+    TrainerAvailabilityWeek:
+      summary: Khung giờ 1 tuần, có 1 buổi bận
+      value:
+        trainerId: 66666666-6666-4666-8666-666666666666
+        from: '2026-11-02'
+        to: '2026-11-08'
+        slots:
+          - { id: 15151515-1515-4515-8515-151515151515, startsAt: '2026-11-02T08:00:00+07:00', endsAt: '2026-11-02T12:00:00+07:00' }
+          - { id: 15151515-1515-4515-8515-151515151516, startsAt: '2026-11-04T17:00:00+07:00', endsAt: '2026-11-04T21:00:00+07:00' }
+        busy:
+          - { startsAt: '2026-11-04T18:00:00+07:00', endsAt: '2026-11-04T19:00:00+07:00' }
+
+    # ----- Lịch PT -----
+    AppointmentPending:
+      summary: Lịch chờ PT trả lời (hội viên đang xem)
+      value:
+        id: eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        trainer: { id: 66666666-6666-4666-8666-666666666666, fullName: Lê Minh Cường, avatarUrl: null }
+        subscription: { id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc, packageName: PT 12 buổi }
+        status: PENDING
+        awaitingRole: TRAINER
+        version: 1
+        startsAt: '2026-11-04T18:00:00+07:00'
+        endsAt: '2026-11-04T19:00:00+07:00'
+        note: Muốn tập chân
+        openProposal: &ProposalInitialOpen
+          id: ffffffff-ffff-4fff-8fff-fffffffffff1
+          kind: INITIAL
+          proposedBy: { id: 44444444-4444-4444-8444-444444444444, fullName: Nguyễn Văn An }
+          proposedRole: MEMBER
+          startsAt: '2026-11-04T18:00:00+07:00'
+          endsAt: '2026-11-04T19:00:00+07:00'
+          note: Muốn tập chân
+          status: OPEN
+          rejectReason: null
+          createdAt: '2026-11-01T20:00:00+07:00'
+        completedBy: null
+        completedAt: null
+        allowedActions: []
+        proposals: [*ProposalInitialOpen]
+    AppointmentConfirmed:
+      summary: Lịch đã chốt (hội viên đang xem)
+      value:
+        id: eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        trainer: { id: 66666666-6666-4666-8666-666666666666, fullName: Lê Minh Cường, avatarUrl: null }
+        subscription: { id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc, packageName: PT 12 buổi }
+        status: CONFIRMED
+        awaitingRole: null
+        version: 2
+        startsAt: '2026-11-04T18:00:00+07:00'
+        endsAt: '2026-11-04T19:00:00+07:00'
+        note: Muốn tập chân
+        openProposal: null
+        completedBy: null
+        completedAt: null
+        allowedActions: [RESCHEDULE, CANCEL]
+        proposals:
+          - id: ffffffff-ffff-4fff-8fff-fffffffffff1
+            kind: INITIAL
+            proposedBy: { id: 44444444-4444-4444-8444-444444444444, fullName: Nguyễn Văn An }
+            proposedRole: MEMBER
+            startsAt: '2026-11-04T18:00:00+07:00'
+            endsAt: '2026-11-04T19:00:00+07:00'
+            note: Muốn tập chân
+            status: ACCEPTED
+            rejectReason: null
+            createdAt: '2026-11-01T20:00:00+07:00'
+    # ----- Theo dõi tập -----
+    TrainingPlan:
+      summary: Kế hoạch tập
+      value: &TrainingPlan
+        id: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+        memberId: 55555555-5555-4555-8555-555555555555
+        trainer: { id: 66666666-6666-4666-8666-666666666666, fullName: Lê Minh Cường, avatarUrl: null }
+        title: Giảm 5kg trong 8 tuần
+        exercises:
+          - { name: Squat, sets: 4, reps: 10, weightKg: 50, durationMinutes: null, note: null }
+          - { name: Chạy bộ, sets: null, reps: null, weightKg: null, durationMinutes: 20, note: Nhịp tim 130–150 }
+        progressPercent: 35
+        updatedAt: '2026-11-04T19:10:00+07:00'
+    TrainingNote:
+      summary: Ghi chú có cập nhật tiến độ
+      value: &TrainingNote
+        id: dddddddd-dddd-4ddd-8ddd-ddddddddddde
+        memberId: 55555555-5555-4555-8555-555555555555
+        trainer: { id: 66666666-6666-4666-8666-666666666666, fullName: Lê Minh Cường, avatarUrl: null }
+        plan: { id: dddddddd-dddd-4ddd-8ddd-dddddddddddd, title: Giảm 5kg trong 8 tuần }
+        content: Đầu gối trái hơi đau, giảm tạ squat còn 40kg.
+        progressPercent: 35
+        createdAt: '2026-11-04T19:10:00+07:00'
+
+    # ----- Lớp học -----
+    GymClassYoga:
+      summary: Lớp Yoga (hội viên đã đăng ký)
+      value: &GymClassYoga
+        id: 12121212-1212-4212-8212-121212121212
+        name: Yoga buổi tối
+        description: Yoga cơ bản cho người mới.
+        trainer: { id: 66666666-6666-4666-8666-666666666666, fullName: Lê Minh Cường, avatarUrl: null }
+        capacity: 15
+        enrolledCount: 9
+        availableSlots: 6
+        startsAt: '2026-11-05T19:00:00+07:00'
+        endsAt: '2026-11-05T20:00:00+07:00'
+        cancelBeforeMinutes: 120
+        cancelDeadline: '2026-11-05T17:00:00+07:00'
+        status: SCHEDULED
+        myEnrollment: { id: 13131313-1313-4313-8313-131313131313, createdAt: '2026-11-02T10:00:00+07:00' }
+    ClassEnrollmentRegistered:
+      summary: Đăng ký lớp
+      value: &ClassEnrollmentRegistered
+        id: 13131313-1313-4313-8313-131313131313
+        classId: 12121212-1212-4212-8212-121212121212
+        member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+        status: REGISTERED
+        createdAt: '2026-11-02T10:00:00+07:00'
+        cancelledAt: null
+
+    # ----- Báo cáo -----
+    ReportOverviewOctober:
+      summary: Tổng quan tháng 10
+      value:
+        from: '2026-10-01'
+        to: '2026-10-31'
+        totalMembers: 30
+        newMembers: 12
+        expiringSoon: 4
+        checkIns: 418
+        popularPackages:
+          - { package: { id: 77777777-7777-4777-8777-777777777777, name: Gym 1 tháng, type: GYM }, paidOrders: 15, revenue: 7500000 }
+          - { package: { id: 88888888-8888-4888-8888-888888888888, name: PT 12 buổi, type: PT }, paidOrders: 3, revenue: 18000000 }
+    RevenueReportByMonth:
+      summary: Doanh thu theo tháng
+      value:
+        from: '2026-09-01'
+        to: '2026-10-31'
+        groupBy: MONTH
+        totalAmount: 31500000
+        paymentCount: 24
+        series:
+          - { period: '2026-09', amount: 6000000, paymentCount: 6 }
+          - { period: '2026-10', amount: 25500000, paymentCount: 18 }
+        byPackage:
+          - { package: { id: 88888888-8888-4888-8888-888888888888, name: PT 12 buổi, type: PT }, amount: 18000000, paymentCount: 3 }
+          - { package: { id: 77777777-7777-4777-8777-777777777777, name: Gym 1 tháng, type: GYM }, amount: 13500000, paymentCount: 21 }
+
+    # ----- Thông báo -----
     # ----- Danh sách (dùng lại ví dụ ở trên bằng YAML anchor) -----
     CheckInOpenList:
       summary: Danh sách 1 dòng
@@ -2806,6 +4930,98 @@ components:
       value:
         data: [*UserTrainer]
         meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    SubscriptionPtList:
+      summary: Danh sách 1 dòng
+      value:
+        data:
+          - id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc
+            member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+            package: { id: 88888888-8888-4888-8888-888888888888, name: PT 12 buổi, type: PT }
+            orderId: 99999999-9999-4999-8999-99999999999a
+            packageName: PT 12 buổi
+            type: PT
+            startsOn: '2026-10-01'
+            endsOn: '2026-11-30'
+            daysLeft: 44
+            status: ACTIVE
+            includesClass: true
+            sessionMinutes: 60
+            sessions: { total: 12, used: 3, held: 2, remaining: 9, bookable: 7 }
+            freeze: null
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    TrainerCuongList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*TrainerCuong]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    TrainerMemberList:
+      summary: Danh sách 1 dòng
+      value:
+        data:
+          - member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+            subscriptions:
+              - id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc
+                packageName: PT 12 buổi
+                type: PT
+                startsOn: '2026-10-01'
+                endsOn: '2026-11-30'
+                status: ACTIVE
+                includesClass: true
+                sessions: { total: 12, used: 3, held: 2, remaining: 9, bookable: 7 }
+            nextAppointmentAt: '2026-11-04T18:00:00+07:00'
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    AppointmentConfirmedList:
+      summary: Danh sách 1 dòng
+      value:
+        data:
+          - id: eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
+            member: { id: 55555555-5555-4555-8555-555555555555, memberCode: HV000123, fullName: Nguyễn Văn An, phone: '0901234567', avatarUrl: null }
+            trainer: { id: 66666666-6666-4666-8666-666666666666, fullName: Lê Minh Cường, avatarUrl: null }
+            subscription: { id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc, packageName: PT 12 buổi }
+            status: CONFIRMED
+            awaitingRole: null
+            version: 2
+            startsAt: '2026-11-04T18:00:00+07:00'
+            endsAt: '2026-11-04T19:00:00+07:00'
+            note: Muốn tập chân
+            openProposal: null
+            completedBy: null
+            completedAt: null
+            allowedActions: [RESCHEDULE, CANCEL]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    TrainingPlanList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*TrainingPlan]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    TrainingNoteList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*TrainingNote]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    GymClassYogaList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*GymClassYoga]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    ClassEnrollmentList:
+      summary: Danh sách 1 dòng
+      value:
+        data: [*ClassEnrollmentRegistered]
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }
+    NotificationList:
+      summary: Danh sách 1 dòng, 1 chưa đọc
+      value:
+        data:
+          - id: 14141414-1414-4414-8414-141414141414
+            type: PAYMENT_SUCCESS
+            title: Thanh toán thành công
+            body: Gói Gym 1 tháng đã được kích hoạt, hiệu lực từ 10/10 đến 09/11.
+            targetType: ORDER
+            targetId: 99999999-9999-4999-8999-999999999999
+            isRead: false
+            createdAt: '2026-10-08T09:45:00+07:00'
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1, unreadCount: 1 }
 
     # ----- Lỗi (mỗi mã một ví dụ; câu hiển thị xem error-codes.md) -----
     ErrValidation:
@@ -2886,3 +5102,36 @@ components:
     ErrRoleChangeNotAllowed:
       summary: ROLE_CHANGE_NOT_ALLOWED
       value: { error: { code: ROLE_CHANGE_NOT_ALLOWED, message: Không đổi được vai trò, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrSubscriptionNotActive:
+      summary: SUBSCRIPTION_NOT_ACTIVE
+      value: { error: { code: SUBSCRIPTION_NOT_ACTIVE, message: Gói không ở trạng thái ACTIVE, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrSubscriptionNotFrozen:
+      summary: SUBSCRIPTION_NOT_FROZEN
+      value: { error: { code: SUBSCRIPTION_NOT_FROZEN, message: Gói không đang bảo lưu, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrFreezeBlockedByAppointments:
+      summary: FREEZE_BLOCKED_BY_APPOINTMENTS
+      value: { error: { code: FREEZE_BLOCKED_BY_APPOINTMENTS, message: Gói còn lịch PT sắp tới, details: { appointmentIds: [eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee] }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrScheduleConflict:
+      summary: SCHEDULE_CONFLICT
+      value: { error: { code: SCHEDULE_CONFLICT, message: 'Trùng lịch PT, hội viên hoặc lớp', details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrStaleVersion:
+      summary: STALE_VERSION
+      value: { error: { code: STALE_VERSION, message: expectedVersion đã cũ, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrNoSessionsAvailable:
+      summary: NO_SESSIONS_AVAILABLE
+      value: { error: { code: NO_SESSIONS_AVAILABLE, message: Hết buổi có thể đặt, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrOutsideSubscriptionPeriod:
+      summary: OUTSIDE_SUBSCRIPTION_PERIOD
+      value: { error: { code: OUTSIDE_SUBSCRIPTION_PERIOD, message: Giờ đề xuất ngoài thời hạn gói, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrSessionNotEnded:
+      summary: SESSION_NOT_ENDED
+      value: { error: { code: SESSION_NOT_ENDED, message: Buổi tập chưa kết thúc, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrNoClassBenefit:
+      summary: NO_CLASS_BENEFIT
+      value: { error: { code: NO_CLASS_BENEFIT, message: Gói không có quyền vào lớp, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrClassFull:
+      summary: CLASS_FULL
+      value: { error: { code: CLASS_FULL, message: Lớp đã đủ chỗ, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrCancellationWindowPassed:
+      summary: CANCELLATION_WINDOW_PASSED
+      value: { error: { code: CANCELLATION_WINDOW_PASSED, message: Đã quá hạn hủy đăng ký, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
