@@ -15,7 +15,7 @@ Giá trị:
 | --- | --- | --- | --- | --- | --- |
 | Xác thực | 7 | Đủ | Chưa | Mock | 14/10 (Triển); quên mật khẩu 20/11 (Hồng Anh) |
 | Hồ sơ | 3 | Đủ | Chưa | Chưa | 14/10 (Triển) |
-| Gói | 4 | Đủ | Chưa | Chưa | 16/10 (Hồng Anh) |
+| Gói | 4 | Đủ | Đang làm (đủ 4 API, chờ PR `honganhw3-packages`; Real khi có staging 27/10) | Chưa | 16/10 (Hồng Anh) |
 | Đơn hàng | 5 | Đủ | Chưa | Chưa | 21/10 (Triển) |
 | Thanh toán | 5 | Đủ | Chưa | Chưa | Tiền mặt 23/10; VNPay 28/10 (Triển) |
 | Gói hội viên | 4 | Đủ | Chưa | Chưa | Đọc 23/10 (Triển); bảo lưu 13/11 (Hồng Anh) |

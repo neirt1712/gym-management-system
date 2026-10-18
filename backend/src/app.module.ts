@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { AuditModule } from './common/audit/audit.module';
 import { AuthCoreModule } from './common/auth/auth-core.module';
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { RolesGuard } from './common/auth/roles.guard';
@@ -14,7 +15,13 @@ import { PrismaModule } from './prisma/prisma.module';
  * Mọi endpoint mặc định cần đăng nhập; endpoint công khai gắn @Public().
  */
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthCoreModule, ...FEATURE_MODULES],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
+    AuditModule,
+    AuthCoreModule,
+    ...FEATURE_MODULES,
+  ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
