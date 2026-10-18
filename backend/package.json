@@ -11,7 +11,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest",
-    "test:e2e": "jest --config test/jest-e2e.json",
+    "test:e2e": "jest --config test/jest-e2e.json --runInBand",
     "prepare": "cd .. && husky",
     "seed": "prisma db seed"
   },
