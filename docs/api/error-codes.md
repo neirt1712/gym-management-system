@@ -11,8 +11,8 @@
 | --- | --- | --- | --- |
 | VALIDATION_ERROR | 400 | Sai cú pháp hoặc thiếu field (`details` liệt kê field) | Thông tin chưa hợp lệ. Kiểm tra các ô được đánh dấu. |
 | UNAUTHENTICATED | 401 | Chưa đăng nhập hoặc token hết hạn | (FE tự gọi refresh; thất bại thì về trang đăng nhập) |
-| FORBIDDEN | 403 | Sai vai trò hoặc không sở hữu tài nguyên | Bạn không có quyền thực hiện thao tác này. |
-| NOT_FOUND | 404 | Không thấy tài nguyên | Không tìm thấy dữ liệu. Có thể đã bị xóa hoặc bạn không có quyền xem. |
+| FORBIDDEN | 403 | Sai vai trò (không sở hữu tài nguyên thì trả NOT_FOUND, Q21) | Bạn không có quyền thực hiện thao tác này. |
+| NOT_FOUND | 404 | Không thấy tài nguyên, hoặc tài nguyên không thuộc về người gọi (không lộ là có tồn tại) | Không tìm thấy dữ liệu. Có thể đã bị xóa hoặc bạn không có quyền xem. |
 | INVALID_CREDENTIALS | 401 | Sai tài khoản hoặc mật khẩu | Sai tài khoản hoặc mật khẩu. |
 | ACCOUNT_LOCKED | 403 | Admin đã khóa tài khoản | Tài khoản đã bị khóa. Liên hệ quầy để được hỗ trợ. |
 | ACCOUNT_TEMPORARILY_LOCKED | 429 | Đăng nhập sai 5 lần (`details.retryAfterSeconds`) | Bạn đăng nhập sai nhiều lần. Thử lại sau ít phút. |
@@ -22,15 +22,17 @@
 | TOKEN_EXPIRED | 400 | Link đặt mật khẩu hết hạn hoặc đã dùng | Liên kết đã hết hạn. Gửi lại yêu cầu đặt mật khẩu. |
 | INVALID_FILE | 422 | Ảnh không phải JPEG/PNG | Chỉ nhận ảnh JPEG hoặc PNG. |
 | PENDING_ORDER_EXISTS | 409 | Đã có đơn PENDING cùng gói (`details.orderId`) | Bạn đang có đơn chờ thanh toán cho gói này. Mở lại đơn đó để thanh toán. |
-| CASH_AMOUNT_MISMATCH | 422 | Tiền nhận khác số tiền cần thu | Số tiền nhận phải bằng số tiền cần thanh toán. |
+| ORDER_NOT_PENDING | 409 | Hủy đơn hoặc tạo thanh toán cho đơn không còn PENDING: đã PAID, CANCELLED, EXPIRED (`details.status`) (Q16) | Đơn này không còn chờ thanh toán. Tải lại để xem trạng thái mới. |
+| CASH_AMOUNT_MISMATCH | 422 | Tiền nhận khác số tiền cần thu (`details.expectedAmount`) | Số tiền nhận phải bằng số tiền cần thanh toán. |
 | NO_ACTIVE_SUBSCRIPTION | 422 | Check-in khi không có gói có quyền vào phòng | Hội viên chưa có gói còn hiệu lực. Mua hoặc gia hạn gói để check-in. |
 | SUBSCRIPTION_EXPIRED | 422 | Gói đã hết hạn | Gói đã hết hạn. Gia hạn để check-in. |
 | SUBSCRIPTION_FROZEN | 422 | Gói đang bảo lưu | Gói đang bảo lưu. Mở lại gói để check-in. |
 | SUBSCRIPTION_NOT_ACTIVE | 409 | Bảo lưu gói không ở trạng thái ACTIVE | Chỉ bảo lưu được gói đang hiệu lực. |
 | SUBSCRIPTION_NOT_FROZEN | 409 | Mở lại gói không đang bảo lưu | Gói này không ở trạng thái bảo lưu. |
-| ALREADY_CHECKED_IN | 409 | Hội viên còn lượt chưa check-out | Hội viên đang trong phòng tập. Check-out lượt trước trước. |
+| ALREADY_CHECKED_IN | 409 | Hội viên còn lượt chưa check-out (`details.checkInId`) | Hội viên đang trong phòng tập. Check-out lượt trước trước. |
 | INVALID_QR | 422 | QR không hợp lệ | Không nhận ra mã QR. Thử nhập số điện thoại. |
 | FREEZE_BLOCKED_BY_APPOINTMENTS | 409 | Gói còn lịch tương lai (`details.appointmentIds`) | Gói còn lịch tập sắp tới. Hủy hoặc hoàn tất các lịch đó trước khi bảo lưu. |
+| FREEZE_LIMIT_REACHED | 409 | Gói đã bảo lưu 1 lần (quyết định 10) (Q21) | Gói này đã bảo lưu một lần, không bảo lưu thêm được. |
 | SCHEDULE_CONFLICT | 409 | Trùng lịch PT, hội viên hoặc lớp của PT | Khung giờ này bị trùng lịch. Chọn giờ khác. |
 | STALE_VERSION | 409 | `expectedVersion` cũ | Lịch vừa được bên kia cập nhật. Xem lại đề xuất mới nhất. |
 | NO_SESSIONS_AVAILABLE | 422 | Hết buổi có thể đặt | Gói đã hết buổi có thể đặt. |
@@ -38,7 +40,17 @@
 | SESSION_NOT_ENDED | 422 | Xác nhận buổi khi chưa qua giờ kết thúc | Buổi tập chưa kết thúc nên chưa xác nhận được. |
 | NO_CLASS_BENEFIT | 422 | Gói không có quyền vào lớp | Gói của bạn không gồm quyền tham gia lớp học. |
 | CLASS_FULL | 409 | Lớp đủ chỗ | Lớp đã đủ chỗ. |
+| CLASS_NOT_OPEN | 409 | Đăng ký lớp đã hủy hoặc đã bắt đầu (Q21) | Lớp đã hủy hoặc đã bắt đầu, không đăng ký được nữa. |
 | CANCELLATION_WINDOW_PASSED | 422 | Quá hạn hủy đăng ký lớp | Đã quá hạn hủy đăng ký lớp này. |
 | ROLE_CHANGE_NOT_ALLOWED | 422 | Đổi vai trò từ/sang MEMBER, hoặc PT còn lịch/lớp tương lai | Không đổi được vai trò cho tài khoản này. |
-| RATE_LIMITED | 429 | Gọi quá nhiều lần (quên mật khẩu…) | Bạn thao tác quá nhanh. Thử lại sau ít phút. |
+| RATE_LIMITED | 429 | Gọi quá nhiều lần (quên mật khẩu…) (`details.retryAfterSeconds`) | Bạn thao tác quá nhanh. Thử lại sau ít phút. |
 | INTERNAL_ERROR | 500 | Lỗi không lường trước | Có lỗi xảy ra. Thử lại sau. |
+
+## Ghi chú Q16, Q21 (Hồng Anh, 18/10)
+
+- Thêm 3 mã: `ORDER_NOT_PENDING` (Q16.2), `FREEZE_LIMIT_REACHED` (Q21.1), `CLASS_NOT_OPEN` (Q21.2). Sau khi merge: chép sang `backend/src/common/errors/codes.ts` (Triển) và `frontend/src/lib/errors.ts` (Sơn).
+- Ghi `details` openapi đang dùng (Q16.3): `checkInId`, `expectedAmount`, `retryAfterSeconds`.
+- Q16.4: thêm `orders.created_at`, `payments.created_at` trong `schema.prisma`; Huy Trường cập nhật `erd-v3.md`.
+- Q16.1 (quên mật khẩu khi tài khoản không có email): **chưa thêm mã**, chờ Huy Trường chốt Q17(a). Nếu chọn "luôn trả 202" thì không cần mã mới.
+- Q21: tạo lịch PT với gói không phải PT, gói không ACTIVE hoặc PT INACTIVE giữ `VALIDATION_ERROR` kèm field, không thêm mã riêng.
+- Q21.3: dòng FORBIDDEN sửa thành "sai vai trò"; không sở hữu thì NOT_FOUND, khớp helper `common/ownership`.
