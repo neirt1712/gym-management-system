@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Hội viên (quầy, quản trị)</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="shell" style="position: relative">
+<aside class="side">
+<a href="CheckIn.html" class="brand"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<span class="side-label">NHÂN VIÊN QUẦY</span>
+<nav aria-label="Menu quầy"><a href="CheckIn.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"></path></svg>Check-in</a><a href="DangTap.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6v18h8"></path><path d="M10 12h11M18 9l3 3-3 3"></path></svg>Đang trong phòng</a><a href="HoiVien.html" aria-current="page"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-2.5-5"></path></svg>Hội viên</a><a href="TienMat.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="3"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 9.5v.01M18 14.5v.01"></path></svg>Xác nhận tiền mặt</a><a href="ChiTietLop.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Lớp học</a></nav>
+<div class="side-foot">Lượt chưa check-out tự đóng lúc 23:59.</div>
+</aside>
+<div class="main">
+<header class="topbar">
+<label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm kiếm</span><input type="search" placeholder="Tên, SĐT hoặc mã hội viên"></label>
+<div class="top-actions">
+<a href="ThongBao.html" class="icon-btn" aria-label="Thông báo, có tin mới"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span class="dot"></span></a>
+<a href="HoSo.html" class="user-chip"><span class="avatar">C</span><span><b>Lê Văn Cường</b><small>Nhân viên quầy</small></span></a>
+</div>
+</header>
+<main class="content enter">
+<div class="page-head"><div><h1 class="h1">Hội viên</h1><p>Tìm, thêm, sửa hồ sơ; mua gói hộ, bảo lưu, đặt lại mật khẩu trong chi tiết. Quản trị dùng chung màn này.</p></div><div class="row"><a href="#them" class="btn btn-primary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg> Thêm hội viên</a></div></div>
+<div class="row"><label class="search" style="max-width: 400px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm hội viên</span><input type="search" placeholder="Tên, số điện thoại hoặc mã hội viên"></label>
+<label class="chip" style="gap: 8px; cursor: default">Trạng thái gói<select style="border: 0; background: transparent; font: 600 14px var(--body)"><option>Tất cả</option><option>Đang hiệu lực</option><option>Đang bảo lưu</option><option>Hết hạn</option><option>Chưa có gói</option></select></label>
+<button type="button" class="chip">Đặt lại</button></div>
+<div class="table-wrap"><table class="tbl">
+<thead><tr><th scope="col">Mã</th><th scope="col">Họ tên</th><th scope="col">Số điện thoại</th><th scope="col">Gói hiện tại</th><th scope="col">Trạng thái gói</th><th scope="col">Tài khoản</th><th scope="col"><span class="sr">Thao tác</span></th></tr></thead>
+<tbody>
+<tr><td class="num">HV000005</td><td><div class="who"><span class="avatar">B</span><b>Trần Văn Bảo</b></div></td><td>0900000005</td><td>Gym + PT 12 buổi</td><td><span class="tag tag-ok">Đang hiệu lực</span></td><td>Đã kích hoạt</td><td class="r"><a href="ChiTietHoiVien.html" class="btn btn-soft btn-sm">Xem</a></td></tr>
+<tr><td class="num">HV000001</td><td><div class="who"><span class="avatar">A</span><b>Nguyễn Văn An</b></div></td><td>0900000001</td><td>Gym 3 tháng</td><td><span class="tag tag-info">Đang bảo lưu</span></td><td>Đã kích hoạt</td><td class="r"><a href="ChiTietHoiVien.html" class="btn btn-soft btn-sm">Xem</a></td></tr>
+<tr><td class="num">HV000041</td><td><div class="who"><span class="avatar">H</span><b>Nguyễn Thị Hoa</b></div></td><td>0900000041</td><td>Gym cơ bản</td><td><span class="tag">Hết hạn</span></td><td>Đã kích hoạt</td><td class="r"><a href="ChiTietHoiVien.html" class="btn btn-soft btn-sm">Xem</a></td></tr>
+<tr><td class="num">HV000052</td><td><div class="who"><span class="avatar">T</span><b>Lý Văn Tâm</b></div></td><td>0900000052</td><td>—</td><td><span class="tag">Chưa có gói</span></td><td><span class="tag tag-warn">Chưa kích hoạt</span></td><td class="r"><a href="ChiTietHoiVien.html" class="btn btn-soft btn-sm">Xem</a></td></tr>
+<tr><td class="num">HV000027</td><td><div class="who"><span class="avatar">L</span><b>Võ Thị Lan</b></div></td><td>0900000027</td><td>Gym cả năm</td><td><span class="tag tag-ok">Đang hiệu lực</span></td><td>Đã kích hoạt</td><td class="r"><a href="ChiTietHoiVien.html" class="btn btn-soft btn-sm">Xem</a></td></tr>
+</tbody></table></div>
+<div class="row between small muted"><span>Hiển thị 1–5 trên 5 hội viên</span><span>Dữ liệu mẫu cho bản vẽ; dữ liệu thật lấy từ GET /members</span></div>
+<section id="them" class="card" style="gap: 18px">
+<div class="row between"><h2 class="h2">Thêm hội viên tại quầy</h2><span class="small muted">Biểu mẫu này cũng dùng để sửa hồ sơ</span></div>
+<div class="grid g3" style="gap: 16px">
+<label class="field">Họ và tên<input class="input" value="Lý Văn Tâm"></label>
+<label class="field">Số điện thoại<input class="input" type="tel" value="0900000052"><span class="hint">Bắt buộc, dùng để đăng nhập.</span></label>
+<label class="field">Email <span class="opt">(không bắt buộc)</span><input class="input" type="email" placeholder="Để trống nếu không có"></label>
+<label class="field">Ngày sinh<input class="input" type="date"></label>
+</div>
+<div class="alert alert-warn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"></path></svg><span><b>Số điện thoại đã được dùng</b> bởi HV000052. <a href="ChiTietHoiVien.html" class="link">Mở hồ sơ đó</a>. (Mẫu lỗi PHONE_DUPLICATED)</span></div>
+<div class="row" style="justify-content: flex-end"><button type="button" class="btn btn-soft">Hủy</button><button type="button" class="btn btn-primary">Lưu hội viên</button></div>
+<span class="small muted">Hồ sơ tạo tại quầy chưa có mật khẩu. Hội viên kích hoạt bằng link email, hoặc quầy đặt mật khẩu trong chi tiết.</span>
+</section>
+</main>
+</div>
+
+</div>
+</x-dc>
+</body>
+</html>

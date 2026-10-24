@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Danh sách huấn luyện viên</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="app">
+<header class="pub-header"><div class="wrap"><a href="Main.html" class="brand"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a><nav class="pub-nav" aria-label="Menu chính"><a href="Main.html">TRANG CHỦ</a><a href="GioiThieu.html">GIỚI THIỆU</a><a href="Main.html#goi-tap">GÓI TẬP</a><a href="DanhSachPT.html" aria-current="page">HUẤN LUYỆN VIÊN</a><a href="LopHoc.html">LỚP HỌC</a></nav><div class="row"><a href="DangKy.html" class="btn btn-ghost btn-sm">Tạo tài khoản</a><a href="DangNhap.html" class="btn btn-dark btn-sm">Đăng nhập</a></div></div></header>
+<main class="wrap enter" style="padding-top: 48px; padding-bottom: 96px; display: flex; flex-direction: column; gap: 28px">
+<div class="row between" style="align-items: flex-end">
+<div style="display: flex; flex-direction: column; gap: 8px"><h1 class="display" style="margin: 0; font-size: 64px">Huấn luyện <span class="sun-text">viên</span></h1><p class="lead">Xem chuyên môn và khung giờ trống, rồi đề xuất lịch với PT bạn chọn.</p></div>
+</div>
+<div class="row" style="gap: 12px">
+<label class="search" style="max-width: 360px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm PT</span><input type="search" placeholder="Tìm theo tên"></label>
+<div class="chips" role="group" aria-label="Lọc chuyên môn"><button type="button" class="chip" aria-pressed="true">Tất cả</button><button type="button" class="chip" aria-pressed="false">Tăng cơ</button><button type="button" class="chip" aria-pressed="false">Giảm mỡ</button><button type="button" class="chip" aria-pressed="false">Phục hồi</button><button type="button" class="chip" aria-pressed="false">Thể lực</button></div>
+</div>
+<div class="grid g3">
+<article class="card lift" style="padding: 0; overflow: hidden; gap: 0">
+<figure class="pic-frame " style="margin: 0; border-radius: 0"><img src="" data-anh="cho-cap-nhat" alt="Ảnh huấn luyện viên Đặng Quốc Huy" class="pic" style="height: 260px"></figure>
+<div style="padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div class="row between"><h2 class="h3">Đặng Quốc Huy</h2><span class="tag tag-warn plain">6 năm</span></div>
+<span class="muted small">Tăng cơ, sức mạnh cho người mới</span>
+<div class="chips"><span class="tag plain">Tăng cơ</span><span class="tag plain">Sức mạnh</span></div>
+<div class="row between" style="padding-top: 8px; border-top: 1px solid var(--line-2)"><span class="small"><b>9</b> khung trống tuần này</span><a href="HoSoPT.html" class="btn btn-dark btn-sm">Xem hồ sơ</a></div>
+</div></article>
+<article class="card lift" style="padding: 0; overflow: hidden; gap: 0">
+<figure class="pic-frame " style="margin: 0; border-radius: 0"><img src="" data-anh="cho-cap-nhat" alt="Ảnh huấn luyện viên Ngô Thảo My" class="pic" style="height: 260px"></figure>
+<div style="padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div class="row between"><h2 class="h3">Ngô Thảo My</h2><span class="tag tag-warn plain">4 năm</span></div>
+<span class="muted small">Giảm mỡ, thể lực, HIIT</span>
+<div class="chips"><span class="tag plain">Giảm mỡ</span><span class="tag plain">Thể lực</span></div>
+<div class="row between" style="padding-top: 8px; border-top: 1px solid var(--line-2)"><span class="small"><b>5</b> khung trống tuần này</span><a href="HoSoPT.html" class="btn btn-dark btn-sm">Xem hồ sơ</a></div>
+</div></article>
+<article class="card lift" style="padding: 0; overflow: hidden; gap: 0">
+<figure class="pic-frame " style="margin: 0; border-radius: 0"><img src="" data-anh="cho-cap-nhat" alt="Ảnh huấn luyện viên Bùi Gia Khánh" class="pic" style="height: 260px"></figure>
+<div style="padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div class="row between"><h2 class="h3">Bùi Gia Khánh</h2><span class="tag tag-warn plain">5 năm</span></div>
+<span class="muted small">Phục hồi chấn thương nhẹ, tư thế</span>
+<div class="chips"><span class="tag plain">Phục hồi</span><span class="tag plain">Tư thế</span></div>
+<div class="row between" style="padding-top: 8px; border-top: 1px solid var(--line-2)"><span class="small"><b>3</b> khung trống tuần này</span><a href="HoSoPT.html" class="btn btn-dark btn-sm">Xem hồ sơ</a></div>
+</div></article>
+<article class="card lift" style="padding: 0; overflow: hidden; gap: 0">
+<figure class="pic-frame " style="margin: 0; border-radius: 0"><img src="" data-anh="cho-cap-nhat" alt="Ảnh huấn luyện viên Trịnh Hải Nam" class="pic" style="height: 260px"></figure>
+<div style="padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div class="row between"><h2 class="h3">Trịnh Hải Nam</h2><span class="tag tag-warn plain">8 năm</span></div>
+<span class="muted small">Sức mạnh, powerlifting</span>
+<div class="chips"><span class="tag plain">Sức mạnh</span></div>
+<div class="row between" style="padding-top: 8px; border-top: 1px solid var(--line-2)"><span class="small"><b>7</b> khung trống tuần này</span><a href="HoSoPT.html" class="btn btn-dark btn-sm">Xem hồ sơ</a></div>
+</div></article>
+<article class="card lift" style="padding: 0; overflow: hidden; gap: 0">
+<figure class="pic-frame " style="margin: 0; border-radius: 0"><img src="" data-anh="cho-cap-nhat" alt="Ảnh huấn luyện viên Lưu Minh Châu" class="pic" style="height: 260px"></figure>
+<div style="padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div class="row between"><h2 class="h3">Lưu Minh Châu</h2><span class="tag tag-warn plain">3 năm</span></div>
+<span class="muted small">Yoga, giãn cơ, core</span>
+<div class="chips"><span class="tag plain">Giãn cơ</span><span class="tag plain">Core</span></div>
+<div class="row between" style="padding-top: 8px; border-top: 1px solid var(--line-2)"><span class="small"><b>6</b> khung trống tuần này</span><a href="HoSoPT.html" class="btn btn-dark btn-sm">Xem hồ sơ</a></div>
+</div></article>
+<article class="card lift" style="padding: 0; overflow: hidden; gap: 0">
+<figure class="pic-frame " style="margin: 0; border-radius: 0"><img src="" data-anh="cho-cap-nhat" alt="Ảnh huấn luyện viên Phan Đức Anh" class="pic" style="height: 260px"></figure>
+<div style="padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div class="row between"><h2 class="h3">Phan Đức Anh</h2><span class="tag tag-warn plain">2 năm</span></div>
+<span class="muted small">Thể lực, chạy bộ</span>
+<div class="chips"><span class="tag plain">Thể lực</span></div>
+<div class="row between" style="padding-top: 8px; border-top: 1px solid var(--line-2)"><span class="small"><b>10</b> khung trống tuần này</span><a href="HoSoPT.html" class="btn btn-dark btn-sm">Xem hồ sơ</a></div>
+</div></article>
+</div>
+<p class="small muted" style="margin: 0">Tên, ảnh và chuyên môn là dữ liệu mẫu. Dữ liệu thật lấy từ GET /trainers.</p>
+</main>
+</div>
+</x-dc>
+</body>
+</html>
