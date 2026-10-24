@@ -586,6 +586,8 @@ export interface paths {
          *     - BE xử lý theo thứ tự: kiểm chữ ký → tìm payment theo `vnp_TxnRef` (= `merchantRef`) →
          *       so số tiền (`vnp_Amount` = amount × 100) → nếu thành công thì kích hoạt gói trong một transaction
          *       (như confirm-cash) → lưu toàn bộ tham số vào `gateway_payload`.
+         *     - VNPay báo thất bại hoặc người dùng hủy: payment `FAILED`, đơn vẫn `PENDING` (trả lại được), thông báo
+         *       `PAYMENT_FAILED`, trả `RspCode 00`. Sơ đồ: `docs/design/sequence-diagrams.md`.
          *     - VNPay có thể gọi lặp: lần sau trả `RspCode 02`, không tạo gói lần hai
          *       (chặn bằng unique `gateway_txn_id`).
          *     - **Chưa chốt (Q17):** IPN báo thành công cho payment đã bị chuyển `FAILED` (người dùng bấm thanh toán
@@ -605,6 +607,121 @@ export interface paths {
         get: operations["vnpayIpn"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gói của tôi, lịch sử gói
+         * @description **Quyền:** MEMBER (của mình), STAFF, ADMIN · **UC10**
+         *
+         *     - MEMBER: luôn chỉ thấy gói của mình, `memberId` bị bỏ qua.
+         *     - Không gửi `status` thì trả mọi trạng thái (dùng cho "lịch sử gói"). Lọc nhiều trạng thái:
+         *       `status=ACTIVE&status=FROZEN`.
+         *     - Gói PT có `sessions` tính sẵn; gói GYM là `null`.
+         *     - Sắp xếp: `endsOn` muộn nhất trước.
+         */
+        get: operations["listSubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Xem chi tiết gói (số buổi theo tháng, bảo lưu)
+         * @description **Quyền:** MEMBER (của mình), STAFF, ADMIN · **UC10**
+         *
+         *     - `monthlySessions`: số buổi PT phân bổ theo tháng (theo giờ bắt đầu của lịch, giờ Việt Nam), đủ các tháng
+         *       từ `startsOn` đến `endsOn`, kể cả tháng không có buổi nào. Gói GYM là mảng rỗng.
+         *     - `freeze`: thông tin bảo lưu (mỗi gói tối đa 1 lần nên đây cũng là lịch sử bảo lưu); `null` nếu chưa bảo lưu.
+         */
+        get: operations["getSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscriptions/{id}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bảo lưu gói
+         * @description **Quyền:** STAFF, ADMIN · **UC11** · Quyết định 10
+         *
+         *     - Chỉ bảo lưu gói `ACTIVE`: khác thì `409 SUBSCRIPTION_NOT_ACTIVE`.
+         *     - Tối đa **1 lần mỗi gói**, `days` từ 1 đến 30. Bảo lưu bắt đầu từ hôm nay (`freeze.frozenFrom`).
+         *     - Gói còn lịch PT trong tương lai (PENDING hoặc CONFIRMED): `409 FREEZE_BLOCKED_BY_APPOINTMENTS` kèm
+         *       `details.appointmentIds`; FE hiện các lịch vướng để hủy hoặc hoàn tất trước.
+         *     - Thành công: gói `FROZEN`, thông báo cho hội viên, ghi `audit_logs` kèm `reason`.
+         *     - Trong lúc bảo lưu, gói không dùng được để check-in (`SUBSCRIPTION_FROZEN`), đặt lịch PT hay đăng ký lớp.
+         *
+         *     **Chưa chốt (Q21):** mã lỗi khi gói đã bảo lưu 1 lần (Hồng Anh bổ sung vào `error-codes.md`).
+         *     **Chưa chốt (Q20):** hết số ngày bảo lưu thì gói tự mở lại (cần thêm job) hay chờ Staff mở.
+         */
+        post: operations["freezeSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscriptions/{id}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mở lại gói đang bảo lưu
+         * @description **Quyền:** STAFF, ADMIN · **UC11** · Quyết định 10
+         *
+         *     - Chỉ mở gói `FROZEN`: khác thì `409 SUBSCRIPTION_NOT_FROZEN`.
+         *     - Gói về `ACTIVE`, `endsOn` được cộng thêm số ngày bảo lưu (BE tính, trả `endsOn` mới).
+         *     - Thông báo cho hội viên, ghi `audit_logs`.
+         *
+         *     **Chưa chốt (Q20):** mở lại sớm hơn số ngày đã đăng ký thì cộng số ngày thực tế đã bảo lưu hay số ngày đã đăng ký.
+         */
+        post: operations["unfreezeSubscription"];
         delete?: never;
         options?: never;
         head?: never;
@@ -772,6 +889,414 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trainers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Danh sách huấn luyện viên
+         * @description **Quyền:** Public · **UC21**
+         *
+         *     - Khách, hội viên chỉ thấy PT `ACTIVE`. Admin thấy cả `INACTIVE` và lọc được theo `status`.
+         *     - Không trả số điện thoại, email của PT.
+         *     - Sắp xếp: tên A→Z.
+         */
+        get: operations["listTrainers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trainers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Xem hồ sơ PT
+         * @description **Quyền:** Public · **UC21**
+         *
+         *     `id` là `trainers.id`. Hồ sơ PT `INACTIVE` vẫn xem được (mở lại link cũ) nhưng không đặt lịch được.
+         */
+        get: operations["getTrainer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sửa hồ sơ, chuyên môn PT hoặc ngừng nhận lịch
+         * @description **Quyền:** ADMIN · **UC33**
+         *
+         *     - Chỉ gửi field muốn đổi. `fullName` lưu ở tài khoản (`users`).
+         *     - `status: INACTIVE`: PT ngừng nhận lịch mới (`POST /appointments` với PT này bị từ chối).
+         */
+        patch: operations["updateTrainer"];
+        trace?: never;
+    };
+    "/trainers/{id}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Xem khung giờ rảnh của PT
+         * @description **Quyền:** Public · **UC22, UC23**
+         *
+         *     - Không gửi `from` thì lấy hôm nay; không gửi `to` thì lấy `from` + 27 ngày (4 tuần). Khoảng tối đa 35 ngày.
+         *     - `slots`: các khoảng PT nhận lịch. `busy`: các khoảng PT đã bận (lịch CONFIRMED, lớp SCHEDULED), chỉ có giờ,
+         *       không kèm thông tin hội viên. FE làm mờ ô bận khi hội viên chọn giờ.
+         */
+        get: operations["getTrainerAvailability"];
+        /**
+         * Thiết lập khung giờ nhận lịch
+         * @description **Quyền:** TRAINER (của mình), ADMIN · **UC22** · Quyết định 14
+         *
+         *     - FE cho PT nhập mẫu theo thứ trong tuần, tự sinh các khoảng cho 4 tuần rồi gọi PUT.
+         *     - BE **thay toàn bộ** khoảng của PT nằm trong `from`..`to` bằng `slots` gửi lên. Ngoài khoảng đó giữ nguyên.
+         *     - Mỗi khoảng phải nằm trong `from`..`to`, `endsAt` sau `startsAt`, các khoảng không chồng nhau;
+         *       sai thì `400 VALIDATION_ERROR` (`details[].field` dạng `slots[3].startsAt`).
+         *     - Đổi khung giờ **không ảnh hưởng** lịch đã có.
+         *     - PT gửi cho `id` của PT khác: `404 NOT_FOUND` (quy ước "của mình").
+         */
+        put: operations["replaceTrainerAvailability"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trainers/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Hội viên PT đang phụ trách
+         * @description **Quyền:** TRAINER (của mình), ADMIN · **UC28**
+         *
+         *     - Hội viên có lịch PENDING, CONFIRMED hoặc COMPLETED với PT này (quyết định 16).
+         *     - Kèm các gói PT `ACTIVE`, `FROZEN` của hội viên với số buổi tính sẵn, và giờ buổi tập sắp tới với PT này.
+         *     - PT gọi `id` của PT khác: `404 NOT_FOUND` (quy ước "của mình").
+         *     - Sắp xếp: buổi sắp tới gần nhất trước; hội viên không có buổi sắp tới xếp sau.
+         */
+        get: operations["listTrainerMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Xem lịch PT (ngày, tuần, tháng)
+         * @description **Quyền:** MEMBER (lịch của mình), TRAINER (lịch của mình), STAFF, ADMIN · **UC26**
+         *
+         *     - MEMBER chỉ thấy lịch của mình (`memberId` bị bỏ qua); TRAINER chỉ thấy lịch của mình (`trainerId` bị bỏ qua).
+         *     - `from`, `to` lọc theo ngày của `startsAt`. Lịch FullCalendar nên gửi đúng khoảng đang xem.
+         *     - Mỗi dòng có `allowedActions` của người gọi, nên lọc "yêu cầu đang chờ tôi" bằng
+         *       `status=PENDING` rồi xem dòng nào có `ACCEPT`.
+         *     - Sắp xếp: `startsAt` sớm nhất trước.
+         */
+        get: operations["listAppointments"];
+        put?: never;
+        /**
+         * Đề xuất lịch tập PT
+         * @description **Quyền:** MEMBER (gói của mình), STAFF, ADMIN (đề xuất hộ hội viên) · **UC23**
+         *
+         *     - Tạo lịch `PENDING` kèm đề xuất `INITIAL` đang `OPEN`, chờ PT trả lời (`awaitingRole = TRAINER`).
+         *       Staff đề xuất hộ thì đề xuất ghi là của bên hội viên (`proposedRole = MEMBER`).
+         *     - `endsAt` = `startsAt` + số phút mỗi buổi của gói (BE tính).
+         *     - Điều kiện, sai thì `400 VALIDATION_ERROR`: gói là gói PT `ACTIVE` của hội viên (`subscriptionId`);
+         *       PT đang `ACTIVE` (`trainerId`); `startsAt` ở tương lai. **Chưa chốt (Q21):** có cần mã lỗi riêng cho hai điều kiện đầu.
+         *     - Hết buổi có thể đặt: `422 NO_SESSIONS_AVAILABLE`. Giờ nằm ngoài `startsOn`..`endsOn` của gói:
+         *       `422 OUTSIDE_SUBSCRIPTION_PERIOD`.
+         *     - Trùng lịch CONFIRMED của PT hoặc hội viên, hoặc trùng lớp của PT: `409 SCHEDULE_CONFLICT`.
+         *       BE kiểm lại lần quyết định khi đồng ý (`/accept`).
+         *     - Gửi thông báo cho PT.
+         *
+         *     **Chưa chốt (Q20):** giờ đề xuất có bắt buộc nằm trong khung rảnh của PT không. Trong lúc chờ, BE không chặn;
+         *     FE cho chọn giờ từ `GET /trainers/{id}/availability`.
+         */
+        post: operations["createAppointment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/appointments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Xem chi tiết lịch (lịch sử đề xuất, hành động được phép)
+         * @description **Quyền:** MEMBER, TRAINER (lịch của mình), STAFF, ADMIN · **UC24–UC26**
+         *
+         *     - `proposals`: mọi đề xuất của lịch, cũ nhất trước (FE vẽ dòng thời gian).
+         *     - `allowedActions` tính cho người gọi:
+         *
+         *     | Tình huống | Ai | allowedActions |
+         *     | --- | --- | --- |
+         *     | PENDING | Bên đang được hỏi | `ACCEPT`, `REJECT`, `COUNTER` |
+         *     | CONFIRMED, chưa tới giờ bắt đầu (Chưa chốt Q20e), không có đề xuất OPEN | Hội viên hoặc PT của lịch | `RESCHEDULE`, `CANCEL` |
+         *     | CONFIRMED, có đề xuất RESCHEDULE/CANCEL đang OPEN | Bên đang được hỏi | `ACCEPT`, `REJECT` |
+         *     | CONFIRMED, đã qua giờ kết thúc | PT của lịch, ADMIN | `COMPLETE` |
+         *     | Còn lại (gồm STAFF) | | `[]` |
+         */
+        get: operations["getAppointment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/appointments/{id}/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Đề xuất giờ khác, xin đổi hoặc xin hủy lịch
+         * @description **Quyền:** hội viên hoặc PT của lịch, khi hành động có trong `allowedActions` · **UC24, UC25**
+         *
+         *     - `COUNTER` (lịch PENDING, bên đang được hỏi): đề xuất OPEN cũ → `SUPERSEDED`, đề xuất mới OPEN,
+         *       `awaitingRole` đổi sang bên kia.
+         *     - `RESCHEDULE` (lịch CONFIRMED): xin đổi sang `startsAt` mới. Lịch giữ giờ cũ đến khi bên kia đồng ý.
+         *     - `CANCEL` (lịch CONFIRMED): xin hủy, không gửi `startsAt`. Lịch giữ nguyên đến khi bên kia đồng ý.
+         *     - `COUNTER`, `RESCHEDULE` bắt buộc `startsAt`; `endsAt` BE tính theo số phút mỗi buổi. Giờ mới ngoài thời hạn gói:
+         *       `422 OUTSIDE_SUBSCRIPTION_PERIOD`; trùng lịch: `409 SCHEDULE_CONFLICT`.
+         *     - Thứ tự kiểm: `expectedVersion` lệch → `409 STALE_VERSION`; hành động không có trong `allowedActions` →
+         *       `403 FORBIDDEN`.
+         *     - Thành công: `version + 1`, thông báo cho bên kia.
+         */
+        post: operations["createAppointmentProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/appointments/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Đồng ý đề xuất đang mở
+         * @description **Quyền:** bên đang được hỏi (`allowedActions` có `ACCEPT`) · **UC24, UC25**
+         *
+         *     - Áp dụng đề xuất OPEN theo bảng ở tag "Lịch PT".
+         *     - Với INITIAL, COUNTER, RESCHEDULE: BE khóa dòng PT (`FOR UPDATE`), kiểm trùng lịch CONFIRMED của PT, của hội viên
+         *       và lớp của PT (`409 SCHEDULE_CONFLICT`), kiểm lại số buổi (`422 NO_SESSIONS_AVAILABLE`).
+         *     - Thứ tự kiểm: `409 STALE_VERSION` → `403 FORBIDDEN` → trùng lịch, số buổi.
+         *     - Thành công: `version + 1`, thông báo cho bên kia.
+         */
+        post: operations["acceptAppointmentProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/appointments/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Từ chối đề xuất đang mở
+         * @description **Quyền:** bên đang được hỏi (`allowedActions` có `REJECT`) · **UC24, UC25**
+         *
+         *     - Bắt buộc `reason` (be-plan tuần 5: "reject có lý do"; lưu vào `rejectReason` của đề xuất).
+         *     - Từ chối INITIAL/COUNTER: lịch `REJECTED`, nhả buổi đang giữ. Từ chối RESCHEDULE/CANCEL: lịch giữ nguyên.
+         *     - Thứ tự kiểm: `409 STALE_VERSION` → `403 FORBIDDEN`. Thành công: `version + 1`, thông báo cho bên kia.
+         */
+        post: operations["rejectAppointmentProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/appointments/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Xác nhận buổi đã tập hoặc vắng
+         * @description **Quyền:** PT của lịch, ADMIN · **UC27** · Quyết định 3
+         *
+         *     - Chỉ lịch `CONFIRMED` và **đã qua `endsAt`**; chưa tới giờ thì `422 SESSION_NOT_ENDED`.
+         *     - `COMPLETED` (đã tập) hoặc `NO_SHOW` (vắng): **cả hai đều trừ 1 buổi**.
+         *     - Lưu người xác nhận và thời điểm. Đề xuất RESCHEDULE/CANCEL còn OPEN (nếu có) chuyển `SUPERSEDED` (Chưa chốt Q20i).
+         *     - Thứ tự kiểm: `409 STALE_VERSION` → `403 FORBIDDEN` → `422 SESSION_NOT_ENDED`.
+         */
+        post: operations["completeAppointment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/members/{id}/training-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Ghi chú tình trạng, tiến độ của hội viên
+         * @description **Quyền:** MEMBER (của mình), TRAINER (hội viên mình phụ trách), ADMIN · **UC29**
+         *
+         *     - `id` là `members.id`. MEMBER gọi `id` của người khác, PT gọi hội viên không phụ trách: `404 NOT_FOUND`.
+         *     - Sắp xếp: mới nhất trước.
+         */
+        get: operations["listTrainingNotes"];
+        put?: never;
+        /**
+         * Ghi chú tình trạng, cập nhật tiến độ
+         * @description **Quyền:** TRAINER (hội viên mình phụ trách) · **UC29**
+         *
+         *     - `planId` (không bắt buộc) phải là kế hoạch của hội viên này.
+         *     - Có cả `planId` và `progressPercent` thì BE cập nhật luôn `progressPercent` của kế hoạch đó.
+         *
+         *     **Chưa chốt (Q20):** Admin có được ghi chú không (api-v3 ghi "Admin" chung cho nhóm). Trong lúc chờ, chỉ PT ghi.
+         */
+        post: operations["createTrainingNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/members/{id}/training-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Kế hoạch tập của hội viên
+         * @description **Quyền:** MEMBER (của mình), TRAINER (hội viên mình phụ trách), ADMIN · **UC30**
+         *
+         *     `id` là `members.id`. Sắp xếp: cập nhật gần nhất trước.
+         */
+        get: operations["listTrainingPlans"];
+        put?: never;
+        /**
+         * Lập kế hoạch tập
+         * @description **Quyền:** TRAINER (hội viên mình phụ trách) · **UC30**
+         *
+         *     Kế hoạch mới có `progressPercent = 0` nếu không gửi. **Chưa chốt (Q20):** Admin có được lập kế hoạch không.
+         */
+        post: operations["createTrainingPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/training-plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sửa kế hoạch tập, cập nhật tiến độ
+         * @description **Quyền:** TRAINER đã lập kế hoạch (và vẫn phụ trách hội viên) · **UC30**
+         *
+         *     Chỉ gửi field muốn đổi. Gửi `exercises` là **thay cả danh sách**. **Chưa chốt (Q20h):** Admin có được sửa không.
+         */
+        patch: operations["updateTrainingPlan"];
+        trace?: never;
+    };
     "/users": {
         parameters: {
             query?: never;
@@ -829,7 +1354,7 @@ export interface paths {
          * @description **Quyền:** ADMIN · **UC33**
          *
          *     - Chỉ gửi field muốn đổi. `shift` chỉ áp dụng cho STAFF.
-         *     - Chuyên môn, giới thiệu của PT sửa ở `PATCH /trainers/{id}` (nhóm PT, bản đủ 74 API).
+         *     - Chuyên môn, giới thiệu của PT sửa ở `PATCH /trainers/{id}`.
          *     - Không đổi vai trò, trạng thái ở đây (dùng `/role`, `/status`).
          */
         patch: operations["updateUser"];
@@ -890,6 +1415,314 @@ export interface paths {
          *     - Người bị đổi vai trò bị đăng xuất khỏi mọi thiết bị. Bắt buộc `reason`. Ghi `audit_logs`.
          */
         patch: operations["updateUserRole"];
+        trace?: never;
+    };
+    "/classes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Danh sách lớp
+         * @description **Quyền:** Public · **UC26, UC37**
+         *
+         *     - Không gửi `from` thì lấy từ hôm nay. Khách, hội viên chỉ thấy lớp `SCHEDULED`; Admin thấy cả `CANCELLED`
+         *       và lọc được theo `status`.
+         *     - `trainerId`: lịch dạy lớp của một PT (PT xem cùng lịch PT, UC26).
+         *     - `mine=true`: chỉ lớp hội viên đang đăng ký (màn "Lớp của tôi"); chỉ MEMBER dùng được.
+         *     - Đã đăng nhập bằng MEMBER thì mỗi lớp có `myEnrollment`; người khác là `null`.
+         *     - Sắp xếp: `startsAt` sớm nhất trước.
+         */
+        get: operations["listClasses"];
+        put?: never;
+        /**
+         * Tạo lớp
+         * @description **Quyền:** ADMIN · **UC36** · Quyết định 11, 15
+         *
+         *     - Tạo từng buổi; nút "nhân bản sang tuần sau" của FE gọi lại endpoint này với giờ mới.
+         *     - `cancelBeforeMinutes` không gửi thì mặc định 120.
+         *     - PT dạy lớp trùng lịch CONFIRMED hoặc lớp khác của PT đó: `409 SCHEDULE_CONFLICT` (BE khóa dòng PT khi kiểm).
+         *     - PT phải đang `ACTIVE`, `startsAt` ở tương lai, `endsAt` sau `startsAt`; sai thì `400 VALIDATION_ERROR`.
+         */
+        post: operations["createClass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/classes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Xem chi tiết lớp
+         * @description **Quyền:** Public · **UC37**
+         *
+         *     `cancelDeadline` (hạn hủy đăng ký) BE tính sẵn từ `startsAt` − `cancelBeforeMinutes`.
+         */
+        get: operations["getClass"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sửa lớp, đổi PT, đổi sức chứa hoặc hủy lớp
+         * @description **Quyền:** ADMIN · **UC36**
+         *
+         *     - Chỉ gửi field muốn đổi. Đổi PT hoặc giờ thì kiểm trùng như khi tạo (`409 SCHEDULE_CONFLICT`).
+         *     - `capacity` không nhỏ hơn số người đang đăng ký: `400 VALIDATION_ERROR` (Chưa chốt Q20i).
+         *     - Hủy lớp: `status: CANCELLED`, gửi thông báo cho người đã đăng ký (be-plan tuần 7). Không mở lại lớp đã hủy,
+         *       tạo lớp mới (Chưa chốt Q20i).
+         *
+         *     **Chưa chốt (Q20):** khi hủy lớp, các đăng ký `REGISTERED` giữ nguyên hay chuyển `CANCELLED`.
+         */
+        patch: operations["updateClass"];
+        trace?: never;
+    };
+    "/classes/{id}/enrollments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Danh sách đăng ký của lớp
+         * @description **Quyền:** ADMIN, STAFF, TRAINER dạy lớp này · **UC38**
+         *
+         *     - PT không dạy lớp này: `404 NOT_FOUND`.
+         *     - Không gửi `status` thì trả cả đăng ký đã hủy. Sắp xếp: đăng ký sớm nhất trước.
+         */
+        get: operations["listClassEnrollments"];
+        put?: never;
+        /**
+         * Đăng ký lớp
+         * @description **Quyền:** MEMBER · **UC37**
+         *
+         *     - Không có body. BE khóa dòng lớp (`FOR UPDATE`) khi kiểm chỗ.
+         *     - Cần gói `ACTIVE` có quyền vào lớp: không có thì `422 NO_CLASS_BENEFIT`.
+         *     - Lớp đủ chỗ: `409 CLASS_FULL`.
+         *     - Đã đăng ký rồi (gửi lặp): trả `200` với đăng ký hiện tại.
+         *
+         *     **Chưa chốt (Q21):** mã lỗi khi lớp đã hủy hoặc đã bắt đầu (Hồng Anh bổ sung vào `error-codes.md`).
+         */
+        post: operations["enrollClass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/classes/{id}/enrollments/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Hủy đăng ký lớp của tôi
+         * @description **Quyền:** MEMBER · **UC37**
+         *
+         *     - Chỉ hủy trước `cancelDeadline` của lớp; quá hạn thì `422 CANCELLATION_WINDOW_PASSED`.
+         *     - Không có đăng ký `REGISTERED` ở lớp này: `404 NOT_FOUND`.
+         *     - Hủy rồi đăng ký lại thì tạo đăng ký mới.
+         */
+        delete: operations["cancelMyClassEnrollment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Thống kê tổng quan
+         * @description **Quyền:** ADMIN · **UC40**
+         *
+         *     - Không gửi `from`, `to` thì lấy tháng hiện tại.
+         *     - `totalMembers`: số hội viên có gói ACTIVE **hôm nay** (không phụ thuộc khoảng ngày).
+         *     - `expiringSoon`: số gói ACTIVE hết hạn trong 7 ngày tới, tính từ hôm nay.
+         *     - `newMembers`, `checkIns`, `popularPackages` tính trong `from`..`to`. `popularPackages`: tối đa 5 gói nhiều đơn PAID nhất.
+         *
+         *     **Chưa chốt (Q20):** "hội viên mới" tính theo đơn PAID đầu tiên trong khoảng hay theo ngày tạo tài khoản.
+         */
+        get: operations["getReportOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Báo cáo doanh thu theo ngày, tháng, năm và theo gói
+         * @description **Quyền:** ADMIN · **UC39** · Quyết định 19
+         *
+         *     - Doanh thu = tổng `amount` của payment `SUCCESS`, theo ngày `paidAt` (giờ Việt Nam).
+         *     - Không gửi `from`, `to` thì lấy tháng hiện tại. `groupBy` mặc định `DAY`.
+         *     - `series` có đủ mọi kỳ trong khoảng, kỳ không có doanh thu là 0. `period` dạng `YYYY-MM-DD` (DAY),
+         *       `YYYY-MM` (MONTH), `YYYY` (YEAR).
+         */
+        get: operations["getReportRevenue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/expiring-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gói sắp hết hạn
+         * @description **Quyền:** ADMIN · **UC40**
+         *
+         *     Gói `ACTIVE` có `endsOn` trong `days` ngày tới (tính cả hôm nay), mặc định 7. Sắp xếp: hết hạn sớm nhất trước.
+         */
+        get: operations["listExpiringSubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Xuất báo cáo Excel
+         * @description **Quyền:** ADMIN · **UC41**
+         *
+         *     - `report` chọn báo cáo; các tham số khác giống endpoint báo cáo tương ứng.
+         *     - Trả file `.xlsx`. FE tải bằng `fetch` (kèm header `Authorization`) rồi lưu blob; tên file lấy từ
+         *       header `Content-Disposition`.
+         *     - Tên cột trong file bằng tiếng Việt (quyết định 18).
+         */
+        get: operations["exportReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Thông báo của tôi
+         * @description **Quyền:** Đã đăng nhập (của mình) · **UC42**
+         *
+         *     - `meta.unreadCount`: tổng số chưa đọc (không phụ thuộc bộ lọc), dùng cho số trên chuông.
+         *     - Sắp xếp: mới nhất trước.
+         */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Đánh dấu đã đọc
+         * @description **Quyền:** Đã đăng nhập (thông báo của mình) · **UC42**
+         *
+         *     Không có body. Gửi lặp khi đã đọc: trả `200` với thông báo hiện tại.
+         */
+        patch: operations["markNotificationRead"];
+        trace?: never;
+    };
+    "/notifications/broadcast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Gửi thông báo chủ động
+         * @description **Quyền:** ADMIN · **UC43** · Quyết định 2 (chỉ trong ứng dụng)
+         *
+         *     - Gửi cho mọi tài khoản `ACTIVE` thuộc các vai trò trong `roles`.
+         *     - Trả số người nhận.
+         *
+         *     **Chưa chốt (Q20):** chọn người nhận theo vai trò, hay cần thêm nhóm "hội viên có gói ACTIVE".
+         */
+        post: operations["broadcastNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/health": {
@@ -1004,6 +1837,48 @@ export interface components {
          */
         CheckoutType: "SELF" | "STAFF" | "AUTO";
         /**
+         * @description PENDING đang thương lượng · CONFIRMED đã chốt · REJECTED bị từ chối · CANCELLED đã hủy (không trừ buổi) ·
+         *     COMPLETED đã tập · NO_SHOW vắng (vẫn trừ 1 buổi).
+         * @enum {string}
+         */
+        AppointmentStatus: "PENDING" | "CONFIRMED" | "REJECTED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
+        /**
+         * @description Một trong hai bên của lịch PT.
+         * @enum {string}
+         */
+        PartyRole: "MEMBER" | "TRAINER";
+        /**
+         * @description INITIAL yêu cầu đầu · COUNTER đề xuất giờ khác · RESCHEDULE xin đổi lịch đã chốt · CANCEL xin hủy lịch đã chốt.
+         * @enum {string}
+         */
+        ProposalKind: "INITIAL" | "COUNTER" | "RESCHEDULE" | "CANCEL";
+        /**
+         * @description OPEN đang chờ trả lời · ACCEPTED được đồng ý · REJECTED bị từ chối · SUPERSEDED bị thay bằng đề xuất khác.
+         * @enum {string}
+         */
+        ProposalStatus: "OPEN" | "ACCEPTED" | "REJECTED" | "SUPERSEDED";
+        /**
+         * @description Hành động người gọi được làm trên lịch; FE hiện nút theo danh sách này.
+         * @enum {string}
+         */
+        AppointmentAction: "ACCEPT" | "REJECT" | "COUNTER" | "RESCHEDULE" | "CANCEL" | "COMPLETE";
+        /**
+         * @description SCHEDULED sắp diễn ra hoặc đã diễn ra · CANCELLED Admin đã hủy.
+         * @enum {string}
+         */
+        ClassStatus: "SCHEDULED" | "CANCELLED";
+        /**
+         * @description REGISTERED đang đăng ký · CANCELLED đã hủy.
+         * @enum {string}
+         */
+        EnrollmentStatus: "REGISTERED" | "CANCELLED";
+        /**
+         * @description Gộp doanh thu theo ngày, tháng hoặc năm.
+         * @default DAY
+         * @enum {string}
+         */
+        ReportGroupBy: "DAY" | "MONTH" | "YEAR";
+        /**
          * @description Mã lỗi. Danh mục, HTTP status và câu hiển thị ở `docs/api/error-codes.md`.
          * @enum {string}
          */
@@ -1019,6 +1894,7 @@ export interface components {
                  *     - `PENDING_ORDER_EXISTS`: `{ orderId }`. `PHONE_DUPLICATED`: `{ memberId }` (nếu có).
                  *     - `ACCOUNT_TEMPORARILY_LOCKED`, `RATE_LIMITED`: `{ retryAfterSeconds }`.
                  *     - `ALREADY_CHECKED_IN`: `{ checkInId }`. `CASH_AMOUNT_MISMATCH`: `{ expectedAmount }`.
+                 *     - `FREEZE_BLOCKED_BY_APPOINTMENTS`: `{ appointmentIds }`.
                  *     - Mã khác: `null`.
                  */
                 details: null | components["schemas"]["FieldError"][] | {
@@ -1446,6 +2322,259 @@ export interface components {
             /** @description Chỉ gói PT có; gói GYM là `null`. */
             sessions: components["schemas"]["SessionCounts"] | null;
         };
+        /** @description Một gói hội viên (dòng trong danh sách). */
+        Subscription: {
+            /** Format: uuid */
+            id: string;
+            member: components["schemas"]["MemberRef"];
+            package: components["schemas"]["PackageRef"];
+            /**
+             * Format: uuid
+             * @description Đơn đã sinh ra gói này.
+             */
+            orderId: string;
+            /** @description Tên gói lúc mua (chụp lại, không đổi khi Admin sửa gói). */
+            packageName: string;
+            type: components["schemas"]["PackageType"];
+            startsOn: components["schemas"]["DateOnly"];
+            /** @description Ngày cuối còn hiệu lực (tính cả ngày này), đã cộng ngày bảo lưu nếu có. */
+            endsOn: components["schemas"]["DateOnly"];
+            /** @description Số ngày từ hôm nay đến `endsOn`, tính cả hai đầu; 0 khi đã qua `endsOn`. */
+            daysLeft: number;
+            status: components["schemas"]["SubscriptionStatus"];
+            includesClass: boolean;
+            /** @description Số phút mỗi buổi PT. `null` với gói GYM. */
+            sessionMinutes: number | null;
+            /** @description Chỉ gói PT có; gói GYM là `null`. */
+            sessions: components["schemas"]["SessionCounts"] | null;
+            /** @description Thông tin bảo lưu; `null` nếu chưa bảo lưu. */
+            freeze: components["schemas"]["FreezeInfo"] | null;
+        };
+        SubscriptionDetail: components["schemas"]["Subscription"] & {
+            /** @description Số buổi PT theo tháng (UC10). Gói GYM là mảng rỗng. */
+            monthlySessions: components["schemas"]["MonthlySessions"][];
+        };
+        MonthlySessions: {
+            /**
+             * @description Tháng, dạng `YYYY-MM`.
+             * @example 2026-10
+             */
+            month: string;
+            /** @description Số buổi COMPLETED. */
+            completed: number;
+            /** @description Số buổi NO_SHOW (vẫn trừ buổi). */
+            noShow: number;
+            /** @description Số buổi PENDING + CONFIRMED. */
+            upcoming: number;
+        };
+        FreezeInfo: {
+            frozenFrom: components["schemas"]["DateOnly"];
+            frozenDays: number;
+            /** @description Ngày cuối của kỳ bảo lưu (BE tính). */
+            frozenUntil: components["schemas"]["DateOnly"];
+            reason: string;
+        };
+        FreezeSubscriptionRequest: {
+            /** @description Số ngày bảo lưu, tối đa 30. */
+            days: number;
+            reason: string;
+        };
+        /** @description Hồ sơ PT công khai (không có SĐT, email). */
+        Trainer: {
+            /**
+             * Format: uuid
+             * @description `trainers.id`
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description `users.id`
+             */
+            userId: string;
+            fullName: string;
+            avatarUrl: string | null;
+            specialties: string[];
+            bio: string | null;
+            experienceYears: number | null;
+            status: components["schemas"]["TrainerStatus"];
+        };
+        UpdateTrainerRequest: {
+            fullName?: string;
+            specialties?: string[];
+            bio?: string | null;
+            experienceYears?: number | null;
+            status?: components["schemas"]["TrainerStatus"];
+        };
+        TimeRange: {
+            startsAt: components["schemas"]["DateTime"];
+            endsAt: components["schemas"]["DateTime"];
+        };
+        AvailabilitySlot: {
+            /** Format: uuid */
+            id: string;
+        } & components["schemas"]["TimeRange"];
+        TrainerAvailability: {
+            /** Format: uuid */
+            trainerId: string;
+            from: components["schemas"]["DateOnly"];
+            to: components["schemas"]["DateOnly"];
+            /** @description Khoảng PT nhận lịch, sớm nhất trước. */
+            slots: components["schemas"]["AvailabilitySlot"][];
+            /** @description Khoảng PT đã bận (lịch CONFIRMED, lớp SCHEDULED), không kèm thông tin hội viên. */
+            busy: components["schemas"]["TimeRange"][];
+        };
+        ReplaceAvailabilityRequest: {
+            from: components["schemas"]["DateOnly"];
+            to: components["schemas"]["DateOnly"];
+            /** @description Gửi mảng rỗng để xóa hết khung giờ trong khoảng. */
+            slots: components["schemas"]["TimeRange"][];
+        };
+        TrainerMember: {
+            member: components["schemas"]["MemberRef"];
+            /** @description Gói PT ACTIVE và FROZEN của hội viên, kèm số buổi. */
+            subscriptions: components["schemas"]["SubscriptionSummary"][];
+            /** @description Giờ bắt đầu buổi PENDING/CONFIRMED sắp tới gần nhất với PT này. */
+            nextAppointmentAt: components["schemas"]["DateTime"] | null;
+        };
+        Appointment: {
+            /** Format: uuid */
+            id: string;
+            member: components["schemas"]["MemberRef"];
+            trainer: components["schemas"]["TrainerRef"];
+            subscription: {
+                /** Format: uuid */
+                id: string;
+                packageName: string;
+            };
+            status: components["schemas"]["AppointmentStatus"];
+            /** @description Bên đang được hỏi; `null` khi không có đề xuất OPEN. */
+            awaitingRole: components["schemas"]["PartyRole"] | null;
+            /** @description Gửi lại làm `expectedVersion` cho mọi hành động. */
+            version: number;
+            startsAt: components["schemas"]["DateTime"];
+            endsAt: components["schemas"]["DateTime"];
+            /** @description Ghi chú của lịch (khi tạo hoặc khi PT xác nhận buổi). */
+            note: string | null;
+            /** @description Đề xuất đang chờ trả lời; `null` nếu không có. */
+            openProposal: components["schemas"]["Proposal"] | null;
+            /** @description Người xác nhận buổi (PT hoặc Admin). */
+            completedBy: components["schemas"]["UserRef"] | null;
+            completedAt: components["schemas"]["DateTime"] | null;
+            /** @description Hành động người gọi được làm lúc này (bảng ở `GET /appointments/{id}`). */
+            allowedActions: components["schemas"]["AppointmentAction"][];
+        };
+        AppointmentDetail: components["schemas"]["Appointment"] & {
+            /** @description Mọi đề xuất của lịch, cũ nhất trước. */
+            proposals: components["schemas"]["Proposal"][];
+        };
+        Proposal: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["ProposalKind"];
+            /** @description Người gửi (có thể là Staff đề xuất hộ hội viên). */
+            proposedBy: components["schemas"]["UserRef"];
+            proposedRole: components["schemas"]["PartyRole"];
+            /** @description Giờ đề xuất; `null` với CANCEL. */
+            startsAt: components["schemas"]["DateTime"] | null;
+            endsAt: components["schemas"]["DateTime"] | null;
+            note: string | null;
+            status: components["schemas"]["ProposalStatus"];
+            rejectReason: string | null;
+            createdAt: components["schemas"]["DateTime"];
+        };
+        CreateAppointmentRequest: {
+            /**
+             * Format: uuid
+             * @description Gói PT ACTIVE dùng buổi. Hội viên suy ra từ gói.
+             */
+            subscriptionId: string;
+            /**
+             * Format: uuid
+             * @description `trainers.id`
+             */
+            trainerId: string;
+            startsAt: components["schemas"]["DateTime"];
+            note?: string | null;
+        };
+        CreateProposalRequest: {
+            /** @enum {string} */
+            kind: "COUNTER" | "RESCHEDULE" | "CANCEL";
+            /** @description Bắt buộc với COUNTER, RESCHEDULE; không gửi với CANCEL. */
+            startsAt?: components["schemas"]["DateTime"];
+            note?: string | null;
+            expectedVersion: number;
+        };
+        VersionedActionRequest: {
+            expectedVersion: number;
+        };
+        RejectProposalRequest: {
+            expectedVersion: number;
+            reason: string;
+        };
+        CompleteAppointmentRequest: {
+            /** @enum {string} */
+            result: "COMPLETED" | "NO_SHOW";
+            note?: string | null;
+            expectedVersion: number;
+        };
+        Exercise: {
+            name: string;
+            sets?: number | null;
+            reps?: number | null;
+            weightKg?: number | null;
+            durationMinutes?: number | null;
+            note?: string | null;
+        };
+        TrainingPlan: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description `members.id`
+             */
+            memberId: string;
+            trainer: components["schemas"]["TrainerRef"];
+            title: string;
+            exercises: components["schemas"]["Exercise"][];
+            progressPercent: number;
+            updatedAt: components["schemas"]["DateTime"];
+        };
+        CreateTrainingPlanRequest: {
+            title: string;
+            exercises: components["schemas"]["Exercise"][];
+            /** @default 0 */
+            progressPercent: number;
+        };
+        UpdateTrainingPlanRequest: {
+            title?: string;
+            exercises?: components["schemas"]["Exercise"][];
+            progressPercent?: number;
+        };
+        TrainingNote: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description `members.id`
+             */
+            memberId: string;
+            trainer: components["schemas"]["TrainerRef"];
+            /** @description Kế hoạch được gắn; `null` nếu ghi chú chung. */
+            plan: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+            } | null;
+            content: string;
+            progressPercent: number | null;
+            createdAt: components["schemas"]["DateTime"];
+        };
+        CreateTrainingNoteRequest: {
+            content: string;
+            /** Format: uuid */
+            planId?: string | null;
+            progressPercent?: number | null;
+        };
         User: {
             /** Format: uuid */
             id: string;
@@ -1499,6 +2628,136 @@ export interface components {
             role: "ADMIN" | "STAFF" | "TRAINER";
             reason: string;
         };
+        /** @description Một buổi lớp (tên schema tránh từ khóa `class`). */
+        GymClass: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string | null;
+            trainer: components["schemas"]["TrainerRef"];
+            capacity: number;
+            /** @description Số đăng ký REGISTERED. */
+            enrolledCount: number;
+            /** @description capacity − enrolledCount. */
+            availableSlots: number;
+            startsAt: components["schemas"]["DateTime"];
+            endsAt: components["schemas"]["DateTime"];
+            cancelBeforeMinutes: number;
+            /** @description Hạn hủy đăng ký = startsAt − cancelBeforeMinutes (BE tính). */
+            cancelDeadline: components["schemas"]["DateTime"];
+            status: components["schemas"]["ClassStatus"];
+            /** @description Đăng ký REGISTERED của hội viên đang đăng nhập; `null` nếu chưa đăng ký hoặc không phải MEMBER. */
+            myEnrollment: {
+                /** Format: uuid */
+                id: string;
+                createdAt: components["schemas"]["DateTime"];
+            } | null;
+        };
+        CreateClassRequest: {
+            name: string;
+            description?: string | null;
+            /**
+             * Format: uuid
+             * @description `trainers.id`
+             */
+            trainerId: string;
+            capacity: number;
+            startsAt: components["schemas"]["DateTime"];
+            endsAt: components["schemas"]["DateTime"];
+            /** @default 120 */
+            cancelBeforeMinutes: number;
+        };
+        UpdateClassRequest: {
+            name?: string;
+            description?: string | null;
+            /** Format: uuid */
+            trainerId?: string;
+            capacity?: number;
+            startsAt?: components["schemas"]["DateTime"];
+            endsAt?: components["schemas"]["DateTime"];
+            cancelBeforeMinutes?: number;
+            /**
+             * @description Chỉ dùng để hủy lớp.
+             * @enum {string}
+             */
+            status?: "CANCELLED";
+        };
+        ClassEnrollment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            classId: string;
+            member: components["schemas"]["MemberRef"];
+            status: components["schemas"]["EnrollmentStatus"];
+            createdAt: components["schemas"]["DateTime"];
+            cancelledAt: components["schemas"]["DateTime"] | null;
+        };
+        ReportOverview: {
+            from: components["schemas"]["DateOnly"];
+            to: components["schemas"]["DateOnly"];
+            /** @description Số hội viên có gói ACTIVE hôm nay. */
+            totalMembers: number;
+            /** @description Số hội viên mới trong khoảng (định nghĩa chờ Q20). */
+            newMembers: number;
+            /** @description Số gói ACTIVE hết hạn trong 7 ngày tới. */
+            expiringSoon: number;
+            /** @description Số lượt check-in trong khoảng. */
+            checkIns: number;
+            popularPackages: components["schemas"]["PackageSales"][];
+        };
+        PackageSales: {
+            package: components["schemas"]["PackageRef"];
+            paidOrders: number;
+            revenue: components["schemas"]["Money"];
+        };
+        RevenueReport: {
+            from: components["schemas"]["DateOnly"];
+            to: components["schemas"]["DateOnly"];
+            groupBy: components["schemas"]["ReportGroupBy"];
+            totalAmount: components["schemas"]["Money"];
+            paymentCount: number;
+            series: {
+                /** @description `YYYY-MM-DD`, `YYYY-MM` hoặc `YYYY` theo `groupBy`. */
+                period: string;
+                amount: components["schemas"]["Money"];
+                paymentCount: number;
+            }[];
+            /** @description Doanh thu theo gói, nhiều nhất trước. */
+            byPackage: {
+                package: components["schemas"]["PackageRef"];
+                amount: components["schemas"]["Money"];
+                paymentCount: number;
+            }[];
+        };
+        Notification: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description Loại thông báo, ví dụ `PAYMENT_SUCCESS`, `PAYMENT_FAILED`, `SUBSCRIPTION_EXPIRING`, `BROADCAST`.
+             *     Danh sách đủ chốt khi làm module thông báo (Hồng Anh). FE hiển thị `title`, `body`; chỉ dùng `type` để chọn biểu tượng.
+             */
+            type: string;
+            title: string;
+            body: string;
+            /** @description Loại đối tượng liên quan để FE mở màn, ví dụ `ORDER`, `SUBSCRIPTION`, `APPOINTMENT`, `CLASS`. */
+            targetType: string | null;
+            /** Format: uuid */
+            targetId: string | null;
+            isRead: boolean;
+            createdAt: components["schemas"]["DateTime"];
+        };
+        NotificationPageMeta: components["schemas"]["PageMeta"] & {
+            /** @description Tổng số thông báo chưa đọc của tôi. */
+            unreadCount: number;
+        };
+        BroadcastRequest: {
+            title: string;
+            body: string;
+            roles: components["schemas"]["Role"][];
+        };
+        BroadcastResponse: {
+            recipientCount: number;
+        };
         UserRef: {
             /**
              * Format: uuid
@@ -1516,6 +2775,15 @@ export interface components {
             memberCode: string;
             fullName: string;
             phone: components["schemas"]["Phone"];
+            avatarUrl: string | null;
+        };
+        TrainerRef: {
+            /**
+             * Format: uuid
+             * @description `trainers.id`
+             */
+            id: string;
+            fullName: string;
             avatarUrl: string | null;
         };
         PackageRef: {
@@ -2507,6 +3775,147 @@ export interface operations {
             };
         };
     };
+    listSubscriptions: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description Lọc theo hội viên (`members.id`). Chỉ STAFF, ADMIN dùng; MEMBER bị bỏ qua. */
+                memberId?: components["parameters"]["MemberIdQuery"];
+                /** @description Một hoặc nhiều trạng thái. */
+                status?: components["schemas"]["SubscriptionStatus"][];
+                type?: components["schemas"]["PackageType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách gói hội viên. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Subscription"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chi tiết gói hội viên. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    freezeSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "days": 14,
+                 *       "reason": "Đi công tác 2 tuần"
+                 *     }
+                 */
+                "application/json": components["schemas"]["FreezeSubscriptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Gói sau khi bảo lưu. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionDetail"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Gói không ở trạng thái ACTIVE, hoặc còn lịch PT sắp tới. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unfreezeSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gói sau khi mở lại. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Gói không đang bảo lưu. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listCheckIns: {
         parameters: {
             query?: {
@@ -2800,6 +4209,744 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listTrainers: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description Tên PT, không phân biệt dấu và hoa thường. */
+                q?: string;
+                /** @description Một chuyên môn, khớp đúng một phần tử trong `specialties`. */
+                specialty?: string;
+                /** @description Chỉ Admin dùng được. */
+                status?: components["schemas"]["TrainerStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách PT. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Trainer"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+        };
+    };
+    getTrainer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hồ sơ PT. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trainer"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateTrainer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "specialties": [
+                 *         "Giảm mỡ",
+                 *         "Tăng cơ",
+                 *         "Yoga"
+                 *       ],
+                 *       "experienceYears": 6
+                 *     }
+                 */
+                "application/json": components["schemas"]["UpdateTrainerRequest"];
+            };
+        };
+        responses: {
+            /** @description Hồ sơ PT sau khi sửa. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trainer"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getTrainerAvailability: {
+        parameters: {
+            query?: {
+                /** @description Từ ngày (tính cả ngày này), giờ Việt Nam. */
+                from?: components["parameters"]["FromDate"];
+                /** @description Đến ngày (tính cả ngày này), giờ Việt Nam. */
+                to?: components["parameters"]["ToDate"];
+            };
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Khung giờ rảnh và giờ bận trong khoảng. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainerAvailability"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    replaceTrainerAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "from": "2026-11-02",
+                 *       "to": "2026-11-08",
+                 *       "slots": [
+                 *         {
+                 *           "startsAt": "2026-11-02T08:00:00+07:00",
+                 *           "endsAt": "2026-11-02T12:00:00+07:00"
+                 *         },
+                 *         {
+                 *           "startsAt": "2026-11-04T17:00:00+07:00",
+                 *           "endsAt": "2026-11-04T21:00:00+07:00"
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["ReplaceAvailabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Khung giờ sau khi thiết lập. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainerAvailability"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listTrainerMembers: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description Tên (không dấu), SĐT hoặc mã hội viên. */
+                q?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách hội viên phụ trách. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["TrainerMember"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAppointments: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description Từ ngày (tính cả ngày này), giờ Việt Nam. */
+                from?: components["parameters"]["FromDate"];
+                /** @description Đến ngày (tính cả ngày này), giờ Việt Nam. */
+                to?: components["parameters"]["ToDate"];
+                /** @description Một hoặc nhiều trạng thái. */
+                status?: components["schemas"]["AppointmentStatus"][];
+                /** @description Lọc theo hội viên (`members.id`). Chỉ STAFF, ADMIN dùng; MEMBER bị bỏ qua. */
+                memberId?: components["parameters"]["MemberIdQuery"];
+                /** @description Lọc theo PT (`trainers.id`). TRAINER bị bỏ qua. */
+                trainerId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách lịch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Appointment"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "subscriptionId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc",
+                 *       "trainerId": "66666666-6666-4666-8666-666666666666",
+                 *       "startsAt": "2026-11-04T18:00:00+07:00",
+                 *       "note": "Muốn tập chân"
+                 *     }
+                 */
+                "application/json": components["schemas"]["CreateAppointmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Đã tạo lịch, chờ PT trả lời. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDetail"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Trùng lịch. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Hết buổi có thể đặt hoặc giờ ngoài thời hạn gói. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chi tiết lịch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createAppointmentProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description Đã gửi đề xuất; trả lịch sau khi cập nhật. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDetail"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Lịch vừa bị bên kia cập nhật, hoặc giờ mới bị trùng. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Giờ mới ngoài thời hạn gói. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    acceptAppointmentProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "expectedVersion": 1
+                 *     }
+                 */
+                "application/json": components["schemas"]["VersionedActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Lịch sau khi đồng ý. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDetail"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Lịch vừa bị cập nhật, hoặc giờ bị trùng. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gói đã hết buổi có thể đặt. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rejectAppointmentProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "expectedVersion": 1,
+                 *       "reason": "Tuần này tôi nghỉ phép"
+                 *     }
+                 */
+                "application/json": components["schemas"]["RejectProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description Lịch sau khi từ chối. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDetail"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Lịch vừa bị cập nhật. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    completeAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "result": "COMPLETED",
+                 *       "expectedVersion": 2,
+                 *       "note": "Tập tốt, tăng tạ squat"
+                 *     }
+                 */
+                "application/json": components["schemas"]["CompleteAppointmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Lịch sau khi xác nhận. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDetail"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Lịch vừa bị cập nhật. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Buổi tập chưa kết thúc. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listTrainingNotes: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description Chỉ lấy ghi chú gắn với kế hoạch này. */
+                planId?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách ghi chú. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["TrainingNote"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createTrainingNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "content": "Đầu gối trái hơi đau, giảm tạ squat còn 40kg.",
+                 *       "planId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+                 *       "progressPercent": 35
+                 *     }
+                 */
+                "application/json": components["schemas"]["CreateTrainingNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Đã ghi chú. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingNote"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listTrainingPlans: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+            };
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách kế hoạch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["TrainingPlan"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createTrainingPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "title": "Giảm 5kg trong 8 tuần",
+                 *       "exercises": [
+                 *         {
+                 *           "name": "Squat",
+                 *           "sets": 4,
+                 *           "reps": 10,
+                 *           "weightKg": 50,
+                 *           "durationMinutes": null,
+                 *           "note": null
+                 *         },
+                 *         {
+                 *           "name": "Chạy bộ",
+                 *           "sets": null,
+                 *           "reps": null,
+                 *           "weightKg": null,
+                 *           "durationMinutes": 20,
+                 *           "note": "Nhịp tim 130–150"
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["CreateTrainingPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Đã lập kế hoạch. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingPlan"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateTrainingPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "progressPercent": 50
+                 *     }
+                 */
+                "application/json": components["schemas"]["UpdateTrainingPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Kế hoạch sau khi sửa. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingPlan"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listUsers: {
         parameters: {
             query?: {
@@ -3041,6 +5188,501 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+        };
+    };
+    listClasses: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description Từ ngày (tính cả ngày này), giờ Việt Nam. */
+                from?: components["parameters"]["FromDate"];
+                /** @description Đến ngày (tính cả ngày này), giờ Việt Nam. */
+                to?: components["parameters"]["ToDate"];
+                /** @description Lọc theo PT dạy lớp (`trainers.id`). */
+                trainerId?: string;
+                /** @description `true` chỉ lớp tôi đang đăng ký (REGISTERED). Chỉ MEMBER. */
+                mine?: boolean;
+                /** @description Chỉ Admin dùng được. */
+                status?: components["schemas"]["ClassStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách lớp. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["GymClass"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+        };
+    };
+    createClass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "Yoga buổi tối",
+                 *       "description": "Yoga cơ bản cho người mới.",
+                 *       "trainerId": "66666666-6666-4666-8666-666666666666",
+                 *       "capacity": 15,
+                 *       "startsAt": "2026-11-05T19:00:00+07:00",
+                 *       "endsAt": "2026-11-05T20:00:00+07:00",
+                 *       "cancelBeforeMinutes": 120
+                 *     }
+                 */
+                "application/json": components["schemas"]["CreateClassRequest"];
+            };
+        };
+        responses: {
+            /** @description Đã tạo lớp. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GymClass"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description PT bị trùng lịch. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getClass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chi tiết lớp. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GymClass"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateClass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateClassRequest"];
+            };
+        };
+        responses: {
+            /** @description Lớp sau khi sửa. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GymClass"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description PT bị trùng lịch. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listClassEnrollments: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                status?: components["schemas"]["EnrollmentStatus"];
+            };
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách đăng ký. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ClassEnrollment"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    enrollClass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Đã đăng ký từ trước. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassEnrollment"];
+                };
+            };
+            /** @description Đã đăng ký. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassEnrollment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Lớp đã đủ chỗ. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gói không gồm quyền vào lớp. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancelMyClassEnrollment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Đã hủy đăng ký. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Đã quá hạn hủy. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getReportOverview: {
+        parameters: {
+            query?: {
+                /** @description Từ ngày (tính cả ngày này), giờ Việt Nam. */
+                from?: components["parameters"]["FromDate"];
+                /** @description Đến ngày (tính cả ngày này), giờ Việt Nam. */
+                to?: components["parameters"]["ToDate"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Số liệu tổng quan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportOverview"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getReportRevenue: {
+        parameters: {
+            query?: {
+                /** @description Từ ngày (tính cả ngày này), giờ Việt Nam. */
+                from?: components["parameters"]["FromDate"];
+                /** @description Đến ngày (tính cả ngày này), giờ Việt Nam. */
+                to?: components["parameters"]["ToDate"];
+                groupBy?: components["schemas"]["ReportGroupBy"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Doanh thu. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueReport"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listExpiringSubscriptions: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description Số ngày tới. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách gói sắp hết hạn. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Subscription"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportReport: {
+        parameters: {
+            query: {
+                report: "overview" | "revenue" | "expiring-subscriptions";
+                /** @description Từ ngày (tính cả ngày này), giờ Việt Nam. */
+                from?: components["parameters"]["FromDate"];
+                /** @description Đến ngày (tính cả ngày này), giờ Việt Nam. */
+                to?: components["parameters"]["ToDate"];
+                /** @description Chỉ dùng với `report=revenue`. */
+                groupBy?: components["schemas"]["ReportGroupBy"];
+                /** @description Chỉ dùng với `report=expiring-subscriptions`. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File Excel. */
+            200: {
+                headers: {
+                    /** @description Tên file, ví dụ `attachment; filename="doanh-thu_2026-10-01_2026-10-31.xlsx"`. */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                /** @description Trang, bắt đầu từ 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Số dòng mỗi trang. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description `false` chỉ lấy thông báo chưa đọc. */
+                isRead?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách thông báo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Notification"][];
+                        meta: components["schemas"]["NotificationPageMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    markNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Mã UUID của tài nguyên. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thông báo sau khi đánh dấu. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    broadcastNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "title": "Nghỉ lễ 20/11",
+                 *       "body": "Phòng tập đóng cửa ngày 20/11. Chúc quý hội viên ngày lễ vui vẻ.",
+                 *       "roles": [
+                 *         "MEMBER"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["BroadcastRequest"];
+            };
+        };
+        responses: {
+            /** @description Đã tạo thông báo cho người nhận. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "recipientCount": 30
+                     *     }
+                     */
+                    "application/json": components["schemas"]["BroadcastResponse"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     health: {

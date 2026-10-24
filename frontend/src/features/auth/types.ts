@@ -21,6 +21,21 @@ export type LoginInput = {
   password: string;
 };
 
+/** UC01 Đăng ký, khớp `RegisterRequest`: email và ngày sinh không bắt buộc (Q15). Ngày sinh dạng `YYYY-MM-DD`. */
+export type RegisterInput = {
+  fullName: string;
+  phone: string;
+  email?: string | null;
+  dob?: string | null;
+  password: string;
+};
+
+/** UC06 Đổi mật khẩu, khớp `ChangePasswordRequest`. */
+export type ChangePasswordInput = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 export type AuthSession = {
   accessToken: string;
   user: SessionUser;

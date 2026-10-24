@@ -1,5 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
+import { ProfilePage } from '../pages/member/ProfilePage';
 import { LoginPage } from '../pages/public/LoginPage';
+import { RegisterPage } from '../pages/public/RegisterPage';
 import { RequireAuth } from './guards/RequireAuth';
 import { RequireRole } from './guards/RequireRole';
 import { AppLayout } from './layouts/AppLayout';
@@ -32,7 +34,7 @@ export const routes: RouteObject[] = [
       placeholder('/packages', 'Gói tập', 'UC07', 'Bằng'),
       placeholder('/trainers', 'Huấn luyện viên', 'UC21', 'Sơn'),
       { path: '/login', element: <LoginPage /> },
-      placeholder('/register', 'Tạo tài khoản', 'UC01', 'Sơn'),
+      { path: '/register', element: <RegisterPage /> },
       placeholder('/forgot-password', 'Quên mật khẩu', 'UC04', 'Sơn'),
       placeholder('/reset-password', 'Đặt lại mật khẩu', 'UC04', 'Sơn'),
       placeholder('/activate', 'Kích hoạt tài khoản', 'UC04', 'Sơn'),
@@ -44,7 +46,7 @@ export const routes: RouteObject[] = [
       {
         element: <AppLayout />,
         children: [
-          placeholder('/me/profile', 'Hồ sơ của tôi', 'UC05, UC06', 'Sơn'),
+          { path: '/me/profile', element: <ProfilePage /> },
           placeholder('/notifications', 'Thông báo', 'UC42', 'Bằng'),
           roleRoutes('MEMBER'),
           roleRoutes('TRAINER'),

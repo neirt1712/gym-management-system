@@ -19,11 +19,19 @@ const toSession = ({ accessToken, user }: ApiSession): AuthSession => ({
 
 /**
  * Xác thực qua API thật (hoặc mock Prism), theo openapi v0.1:
- * POST /auth/login, /auth/refresh (cookie HttpOnly), /auth/logout.
+ * POST /auth/login, /auth/register, /auth/refresh (cookie HttpOnly), /auth/logout, /auth/change-password.
  */
 export const createHttpAuthApi = (client = api): AuthApi => ({
   async login(input) {
     return toSession(unwrap(await client.POST('/auth/login', { body: input })));
+  },
+
+  async register(input) {
+    return toSession(unwrap(await client.POST('/auth/register', { body: input })));
+  },
+
+  async changePassword(input) {
+    return toSession(unwrap(await client.POST('/auth/change-password', { body: input })));
   },
 
   async refresh() {

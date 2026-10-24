@@ -13,4 +13,4 @@ export const authApi: AuthApi = isFakeAuth ? fakeAuthApi : httpAuthApi;
 
 export { useAuth } from './AuthContext';
 export type { AuthApi } from './authApi';
-export type { SessionUser, LoginInput } from './types';
+export type { SessionUser, LoginInput, RegisterInput, ChangePasswordInput } from './types';
