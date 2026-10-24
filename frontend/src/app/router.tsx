@@ -1,5 +1,10 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
+import { MemberHomePage } from '../pages/member/MemberHomePage';
+import { OrderDetailPage } from '../pages/member/OrderDetailPage';
+import { OrdersPage } from '../pages/member/OrdersPage';
 import { ProfilePage } from '../pages/member/ProfilePage';
+import { PurchasePage } from '../pages/member/PurchasePage';
+import { SubscriptionDetailPage } from '../pages/member/SubscriptionDetailPage';
 import { LoginPage } from '../pages/public/LoginPage';
 import { RegisterPage } from '../pages/public/RegisterPage';
 import { RequireAuth } from './guards/RequireAuth';
@@ -21,9 +26,28 @@ const placeholder = (path: string, title: string, uc: string, owner: string): Ro
   element: <PlaceholderPage title={title} uc={uc} owner={owner} />,
 });
 
+/** Màn đã làm xong, thay trang tạm cùng đường dẫn; route chi tiết (:id) không có trong menu. */
+const READY: Record<string, RouteObject['element']> = {
+  '/member': <MemberHomePage />,
+  '/member/orders': <OrdersPage />,
+};
+
+const EXTRA_ROUTES: Partial<Record<Role, RouteObject[]>> = {
+  MEMBER: [
+    { path: '/member/purchase/:packageId', element: <PurchasePage /> },
+    { path: '/member/orders/:id', element: <OrderDetailPage /> },
+    { path: '/member/subscriptions/:id', element: <SubscriptionDetailPage /> },
+  ],
+};
+
 const roleRoutes = (role: Role): RouteObject => ({
   element: <RequireRole roles={[role]} />,
-  children: NAV_BY_ROLE[role].map((i) => placeholder(i.path, i.label, i.uc, i.owner)),
+  children: [
+    ...NAV_BY_ROLE[role].map((i) =>
+      READY[i.path] ? { path: i.path, element: READY[i.path] } : placeholder(i.path, i.label, i.uc, i.owner),
+    ),
+    ...(EXTRA_ROUTES[role] ?? []),
+  ],
 });
 
 export const routes: RouteObject[] = [

@@ -34,7 +34,7 @@ describe('RegisterPage', () => {
   it('SĐT đã có hồ sơ tại quầy thì hướng dẫn kích hoạt, không báo trùng', async () => {
     renderApp('/register');
     await fill(DESK_PROFILE_PHONE);
-    expect(await screen.findByText('Số điện thoại này đã có hồ sơ tại quầy')).toBeInTheDocument();
+    expect(await screen.findByText(/Số điện thoại này đã có hồ sơ tại quầy/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Kích hoạt' })).toHaveAttribute('href', '/activate');
   });
 });

@@ -5,7 +5,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ApiErrorAlert } from '../../app/feedback/ApiErrorAlert';
 import { ROLE_HOME } from '../../app/roles';
 import { useAuth } from '../../features/auth';
-import { getErrorCode, getFieldErrors } from '../../lib/errors';
+import { getErrorCode, getErrorMessage, getFieldErrors } from '../../lib/errors';
 import { space } from '../../theme/tokens';
 import { PASSWORD_RULES, PHONE_RULES } from '../../features/auth/rules';
 
@@ -65,8 +65,8 @@ export const RegisterPage = () => {
               type="info"
               showIcon
               style={{ marginBottom: space.md }}
-              message="Số điện thoại này đã có hồ sơ tại quầy"
-              description="Kích hoạt tài khoản bằng liên kết trong email, hoặc nhờ quầy đặt mật khẩu nếu bạn không có email."
+              message={getErrorMessage(error)}
+              description="Có email thì dùng liên kết kích hoạt; không có email thì nhờ quầy đặt mật khẩu."
               action={<Link to="/activate">Kích hoạt</Link>}
             />
           ) : (

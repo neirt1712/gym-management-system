@@ -41,6 +41,7 @@ component ──> hook (features/<domain>/api.ts, TanStack Query)
 | `/me/profile` | Mọi vai trò | Hồ sơ, đổi mật khẩu | UC05, UC06 | Sơn |
 | `/member` | Member | Tổng quan: gói, buổi còn lại, lịch sắp tới, QR | UC10, UC15 | Sơn |
 | `/member/purchase/:packageId`, `/member/orders`, `/member/orders/:id` | Member | Mua gói, đơn, kết quả thanh toán, biên lai | UC09, UC12, UC14 | Sơn |
+| `/member/subscriptions/:id` | Member | Chi tiết gói của tôi: số buổi theo tháng, bảo lưu | UC10 | Sơn |
 | `/member/appointments`, `/member/appointments/:id` | Member | Lịch PT, chi tiết và thương lượng | UC23–UC26 | Sơn |
 | `/member/classes` | Member | Lớp học, lớp của tôi | UC37 | Sơn |
 | `/member/training` | Member | Kế hoạch và tiến độ tập | UC29, UC30 | Bằng |

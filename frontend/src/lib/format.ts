@@ -31,3 +31,7 @@ export const formatTimeRange = (start: string, end: string): string => {
 /** (7, 12) → "Còn 7/12 buổi" */
 export const formatSessionsLeft = (remaining: number, total: number): string =>
   `Còn ${remaining}/${total} buổi`;
+
+/** (1, 'MONTH') → "1 tháng"; (30, 'DAY') → "30 ngày" */
+export const formatDuration = (value: number, unit: 'DAY' | 'MONTH'): string =>
+  `${value} ${unit === 'MONTH' ? 'tháng' : 'ngày'}`;
