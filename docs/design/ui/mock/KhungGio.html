@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Khung giờ rảnh của PT</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="shell" style="position: relative">
+<aside class="side">
+<a href="LichPT.html" class="brand"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<span class="side-label">HUẤN LUYỆN VIÊN</span>
+<nav aria-label="Menu huấn luyện viên"><a href="LichPT.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>Lịch dạy</a><a href="KhungGio.html" aria-current="page"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Khung giờ rảnh</a><a href="HoiVienPT.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-2.5-5"></path></svg>Hội viên của tôi</a><a href="TheoDoiTap.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.5"></circle></svg>Theo dõi tập</a><a href="ChiTietLop.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Lớp của tôi</a></nav>
+<div class="side-foot">Yêu cầu lịch chưa trả lời sau 24 giờ sẽ được nhắc lại.</div>
+</aside>
+<div class="main">
+<header class="topbar">
+<label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm kiếm</span><input type="search" placeholder="Tìm hội viên"></label>
+<div class="top-actions">
+<a href="ThongBao.html" class="icon-btn" aria-label="Thông báo, có tin mới"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span class="dot"></span></a>
+<a href="HoSo.html" class="user-chip"><span class="avatar">H</span><span><b>Đặng Quốc Huy</b><small>Huấn luyện viên</small></span></a>
+</div>
+</header>
+<main class="content enter">
+<div class="page-head"><div><h1 class="h1">Khung giờ rảnh</h1><p>Đặt mẫu theo thứ trong tuần. Bấm Áp dụng để sinh khung cho 4 tuần tới. Lịch đã chốt không bị ảnh hưởng.</p></div><div class="row"><button type="button" class="btn btn-soft">Sao chép tuần trước</button><button type="button" class="btn btn-primary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg> Áp dụng 4 tuần</button></div></div>
+<div class="card glow tight" style="flex-direction: row; flex-wrap: wrap; gap: 14px; align-items: center"><span class="icon-tile sun"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span><b>{{count}} giờ rảnh mỗi tuần</b><span class="small" style="color: var(--text-2)">Bấm vào ô để bật hoặc tắt. Mỗi ô là 60 phút.</span></div>
+<div class="table-wrap" style="padding: 16px">
+<div style="display: grid; grid-template-columns: 72px repeat(7, minmax(84px, 1fr)); gap: 8px; min-width: 760px">
+<span></span>
+<sc-for list="{{days}}" as="d" hint-placeholder-count="7"><b class="small" style="text-align: center">{{d}}</b></sc-for>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+<span class="small muted" style="align-self: center; text-align: right; padding-right: 6px">{{r.h}}</span>
+<sc-for list="{{r.cells}}" as="c" hint-placeholder-count="7"><button type="button" aria-pressed="{{c.pressed}}" aria-label="{{c.label}}" onClick="{{c.flip}}" class="chip" style="{{c.style}}; justify-content: center; min-height: 44px; border-radius: 14px; font-size: 12px">{{c.text}}</button></sc-for>
+</sc-for>
+</div>
+</div>
+<div class="alert alert-info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg><span>Khung rảnh không được chồng nhau; trùng với lớp bạn dạy thì hệ thống báo trùng lịch.</span></div>
+</main>
+</div>
+
+</div>
+</x-dc>
+</body>
+</html>

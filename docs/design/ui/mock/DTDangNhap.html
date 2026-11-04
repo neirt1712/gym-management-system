@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Điện thoại: đăng nhập</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+.phone-root{width:390px;height:844px;position:relative;overflow:hidden;background:#F7F8FA;color:#1B2430;font-family:'Be Vietnam Pro',system-ui,sans-serif;display:flex;flex-direction:column}
+.phone-body{flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:14px}
+.phone-top{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 4px}
+.phone-tabs{display:grid;grid-template-columns:repeat(5,1fr);background:#FFFFFF;border-top:1px solid #E3E5EA;padding:8px 6px 14px}
+.ptab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#5F6773;text-decoration:none;padding:6px 0;border-radius:12px}
+.ptab.on{color:#1B2430} .ptab.on svg{background:#2BD46A;border-radius:10px;padding:3px;box-sizing:content-box}
+
+</style>
+</helmet>
+<div class="phone-root" style="background: #1B2430; color: #FFFFFF">
+<div class="phone-top"><a href="DTTrangChu.html" class="brand" style="font-size: 20px; color: #FFFFFF"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a></div>
+<div class="phone-body enter dark-zone" style="justify-content: flex-end; position: relative">
+<span class="sp sp-chev green" style="width: 110px; height: 46px; right: 20px; top: 40px" aria-hidden="true"><i><svg viewBox="0 0 120 50" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6l20 19-20 19"></path><path d="M48 6l20 19-20 19"></path><path d="M88 6l20 19-20 19"></path></svg></i></span>
+<span class="sp sp-pulse green" style="width: 260px; height: 70px; left: 0; top: 140px" aria-hidden="true"><i><svg viewBox="0 0 300 80" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M0 44h80l14-30 22 60 18-46 12 16h154"></path></svg></i></span>
+<h1 class="display" style="margin: 0; font-size: 56px; line-height: .95">Hôm nay<br><span style="color: #2BD46A">tập gì?</span></h1>
+<form class="card" style="gap: 14px; padding: 20px">
+<label class="field">Số điện thoại<input class="input" type="tel" value="0900000001"></label>
+<label class="field">Mật khẩu<input class="input" type="password" value="matkhau123"></label>
+<a href="DTTongQuan.html" class="btn btn-primary btn-block" style="min-height: 52px">Đăng nhập</a>
+<div class="row between small"><a href="QuenMatKhau.html" class="link">Quên mật khẩu?</a><a href="DangKy.html" class="link">Tạo tài khoản</a></div>
+</form>
+</div>
+</div>
+</x-dc>
+</body>
+</html>
