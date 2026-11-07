@@ -1,0 +1,83 @@
+# CI của nhóm. Chủ file: Hồng Anh. Không deploy (Q23): chỉ kiểm tra code.
+# Chạy khi mở/cập nhật PR vào develop hoặc main, và khi push lên develop.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Script `prepare` gọi husky; trong CI không cần hook git.
+  HUSKY: '0'
+
+jobs:
+  backend:
+    name: Backend (lint, typecheck, unit, e2e, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        # Cùng bản với docker-compose.yml (ADR 0001: PostgreSQL 16). Extension có sẵn trong contrib.
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gym
+          POSTGRES_PASSWORD: gym
+          # Test e2e bắt buộc tên DB kết thúc bằng _test (xem test/*.e2e-spec.ts).
+          POSTGRES_DB: gym_test
+          TZ: UTC
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gym -d gym_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # Chỉ là DB tạm của CI, không phải bí mật.
+      DATABASE_URL: postgresql://gym:gym@localhost:5432/gym_test?schema=public
+      TEST_DATABASE_URL: postgresql://gym:gym@localhost:5432/gym_test?schema=public
+      JWT_SECRET: ci-test-secret
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --ci
+      # Migration đã chứa toàn bộ prisma/sql/rules.sql (extension, unique có điều kiện, exclusion).
+      - run: npx prisma migrate deploy
+      - run: npm run test:e2e -- --ci
+      - run: npm run build
+
+  frontend:
+    name: Frontend (lint, typecheck, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --passWithNoTests
+      - run: npm run build
