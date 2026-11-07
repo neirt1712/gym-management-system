@@ -4,7 +4,9 @@
 - **Ai đọc:** cả nhóm và Claude, ở đầu mỗi phiên (`/team-start`).
 - Giữ ngắn: tối đa 3 gạch đầu dòng mỗi cột. Lịch sử xem git log, không chép vào đây.
 
-Cập nhật lần cuối: 25/10/2026 · Tuần 3 (dòng Sơn); 18/10 (dòng Triển, Hồng Anh)
+Cập nhật lần cuối: 05/11/2026 (mục bên dưới bảng); 25/10 (dòng Sơn); 18/10 (dòng Triển, Hồng Anh)
+
+**Ghi chú 05/11 (Sơn cùng Claude, nhánh local `tsonw4-tich-hop`, chưa commit, chưa push):** viết thay phần BE còn trễ: Auth (trừ quên/đặt lại mật khẩu), `/me` + tạo lại QR, đơn hàng, thanh toán tiền mặt và VNPay + IPN, đọc gói hội viên. Typecheck, lint, 33 unit test đạt. **Chưa chạy e2e vì máy chưa có database**, nên chưa coi là xong. Test frontend còn 8–9/43 lỗi timeout, chưa xác định nguyên nhân. Còn thiếu: tài khoản `users`, check-in, thông báo, seed demo, `POST /uploads/avatar`; toàn bộ phần của Bằng; nối FE với API thật.
 
 | Người | Đã xong (tuần này) | Đang làm | Đang vướng / chờ ai |
 | --- | --- | --- | --- |
