@@ -78,7 +78,7 @@ describe('PT (e2e)', () => {
           email: 'c@gym.local',
         },
         { id: ID.dungUser, phone: '0900000022', fullName: 'Phạm Dũng', role: 'TRAINER' },
-        // Từng là PT, nay là Staff: không hiện trong danh sách PT
+        // Từng là PT, nay là Staff: hồ sơ INACTIVE, khách không thấy, Admin và link cũ vẫn xem được
         { id: ID.oldPtUser, phone: '0900000023', fullName: 'An Cũ', role: 'STAFF' },
         { id: ID.anUser, phone: '0901234567', fullName: 'Nguyễn Văn An', role: 'MEMBER' },
         { id: ID.binhUser, phone: '0912345678', fullName: 'Trần Thị Bình', role: 'MEMBER' },
@@ -180,7 +180,7 @@ describe('PT (e2e)', () => {
   });
 
   describe('UC21 GET /trainers', () => {
-    it('khách chỉ thấy PT ACTIVE đang là TRAINER, không có SĐT, email', async () => {
+    it('khách chỉ thấy PT ACTIVE, không có SĐT, email', async () => {
       const res = await http().get('/api/v1/trainers').expect(200);
       expect(res.body.meta).toEqual({ page: 1, pageSize: 20, total: 1, totalPages: 1 });
       expect(res.body.data).toEqual([
@@ -199,12 +199,12 @@ describe('PT (e2e)', () => {
 
     it('Admin thấy cả INACTIVE, tên A→Z, lọc status; hội viên gửi status bị bỏ qua', async () => {
       const all = await http().get('/api/v1/trainers').set('Authorization', admin()).expect(200);
-      expect(all.body.data.map((t: { id: string }) => t.id)).toEqual([ID.cuong, ID.dung]);
+      expect(all.body.data.map((t: { id: string }) => t.id)).toEqual([ID.oldPt, ID.cuong, ID.dung]);
       const inactive = await http()
         .get('/api/v1/trainers?status=INACTIVE')
         .set('Authorization', admin())
         .expect(200);
-      expect(inactive.body.data.map((t: { id: string }) => t.id)).toEqual([ID.dung]);
+      expect(inactive.body.data.map((t: { id: string }) => t.id)).toEqual([ID.oldPt, ID.dung]);
       const asMember = await http()
         .get('/api/v1/trainers?status=INACTIVE')
         .set('Authorization', member())
@@ -234,10 +234,11 @@ describe('PT (e2e)', () => {
       expect(res.body).toMatchObject({ id: ID.dung, status: 'INACTIVE', fullName: 'Phạm Dũng' });
     });
 
-    it('không có, hoặc người đã thôi làm PT: 404 NOT_FOUND', async () => {
+    it('không có: 404 NOT_FOUND; người đã thôi làm PT vẫn xem được (INACTIVE)', async () => {
       const res = await http().get(`/api/v1/trainers/${UNKNOWN_ID}`).expect(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
-      await http().get(`/api/v1/trainers/${ID.oldPt}`).expect(404);
+      const old = await http().get(`/api/v1/trainers/${ID.oldPt}`).expect(200);
+      expect(old.body.status).toBe('INACTIVE');
     });
   });
 
@@ -355,6 +356,31 @@ describe('PT (e2e)', () => {
       expect(reversed.body.error.details[0].field).toBe('slots[0].endsAt');
       // Dữ liệu cũ giữ nguyên khi lỗi
       expect(await prisma.trainerAvailability.count({ where: { trainerId: ID.cuong } })).toBe(1);
+    });
+
+    it('PUT chồng với khung cũ vắt qua mép khoảng: 400 kèm field slots[i], khung cũ giữ nguyên', async () => {
+      const d3 = vnDay(3);
+      await prisma.trainerAvailability.create({
+        data: {
+          trainerId: ID.cuong,
+          startsAt: new Date(at(d3, '22:00')),
+          endsAt: new Date(at(vnDay(4), '02:00')),
+        },
+      });
+      const res = await http()
+        .put(`/api/v1/trainers/${ID.cuong}/availability`)
+        .set('Authorization', cuong())
+        .send({
+          from: d3,
+          to: d3,
+          slots: [
+            { startsAt: at(d3, '08:00'), endsAt: at(d3, '09:00') },
+            { startsAt: at(d3, '21:00'), endsAt: at(d3, '23:00') },
+          ],
+        })
+        .expect(400);
+      expect(res.body.error.details).toEqual([{ field: 'slots[1].startsAt', messages: expect.any(Array) }]);
+      expect(await prisma.trainerAvailability.count({ where: { trainerId: ID.cuong } })).toBe(2);
     });
 
     it('PT sửa khung của PT khác: 404; hội viên: 403; không token: 401', async () => {

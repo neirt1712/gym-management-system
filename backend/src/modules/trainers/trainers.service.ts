@@ -54,16 +54,14 @@ const toTrainerResponse = (t: Trainer & { user: User }): TrainerResponse => ({
   status: t.status,
 });
 
-/** Chỉ người đang giữ vai trò TRAINER (người từng là PT vẫn còn dòng trainers cũ). */
-const IS_CURRENT_TRAINER: Prisma.TrainerWhereInput = { user: { role: 'TRAINER' } };
-
 @Injectable()
 export class TrainersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** UC21. Khách, hội viên chỉ thấy ACTIVE; Admin thấy cả INACTIVE và lọc status. Tên A→Z. */
   async list(query: ListTrainersQueryDto, user?: AuthUser) {
-    const conditions: Prisma.TrainerWhereInput[] = [IS_CURRENT_TRAINER];
+    // Người thôi làm PT có hồ sơ INACTIVE (PATCH /users/{id}/role), nên khách không thấy; Admin thấy như PT ngừng nhận lịch
+    const conditions: Prisma.TrainerWhereInput[] = [];
     if (user?.role === 'ADMIN') {
       if (query.status) conditions.push({ status: query.status });
     } else {
@@ -161,24 +159,28 @@ export class TrainersService {
       }
     }
 
-    try {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.trainerAvailability.deleteMany({
-          where: { trainerId: trainer.id, startsAt: { gte: rangeStart }, endsAt: { lte: rangeEnd } },
-        });
-        if (sorted.length) {
-          await tx.trainerAvailability.createMany({
-            data: sorted.map((s) => ({ trainerId: trainer.id, startsAt: s.startsAt, endsAt: s.endsAt })),
-          });
-        }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.trainerAvailability.deleteMany({
+        where: { trainerId: trainer.id, startsAt: { gte: rangeStart }, endsAt: { lte: rangeEnd } },
       });
-    } catch (e) {
-      // Exclusion constraint: khoảng mới chồng với khoảng cũ vắt qua mép from/to (không bị thay)
-      if (String((e as Error).message).includes('trainer_availabilities_no_overlap')) {
-        throw fieldError('slots', 'Chồng giờ với khung rảnh đã có ngoài khoảng from..to');
+      // Còn lại trong khoảng chỉ có khung cũ vắt qua mép from/to (không bị thay); khung mới chồng lên thì báo đúng slots[i]
+      const edges = await tx.trainerAvailability.findMany({
+        where: { trainerId: trainer.id, startsAt: { lt: rangeEnd }, endsAt: { gt: rangeStart } },
+      });
+      const clash = sorted.find((s) => edges.some((e) => s.startsAt < e.endsAt && e.startsAt < s.endsAt));
+      if (clash) {
+        throw fieldError(
+          `slots[${clash.i}].startsAt`,
+          'Chồng giờ với khung rảnh đã có ngoài khoảng from..to',
+        );
       }
-      throw e;
-    }
+      if (sorted.length) {
+        // Exclusion constraint trong DB vẫn chặn nếu hai yêu cầu cùng lúc lọt qua bước trên
+        await tx.trainerAvailability.createMany({
+          data: sorted.map((s) => ({ trainerId: trainer.id, startsAt: s.startsAt, endsAt: s.endsAt })),
+        });
+      }
+    });
     return this.loadAvailability(trainer.id, dto.from, dto.to);
   }
 
@@ -304,7 +306,7 @@ export class TrainersService {
   private async findOrThrow(id: string) {
     if (!isUUID(id)) throw new AppError('NOT_FOUND');
     const trainer = await this.prisma.trainer.findFirst({
-      where: { id, ...IS_CURRENT_TRAINER },
+      where: { id },
       include: { user: true },
     });
     assertFound(trainer);
