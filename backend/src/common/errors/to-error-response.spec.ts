@@ -3,14 +3,20 @@ import { AppError } from './app-error';
 import { toErrorResponse } from './to-error-response';
 
 describe('toErrorResponse', () => {
-  it('AppError lấy status từ danh mục và giữ details', () => {
+  it('AppError lấy status và câu mặc định tiếng Việt từ danh mục, giữ details', () => {
     const result = toErrorResponse(new AppError('PENDING_ORDER_EXISTS', { orderId: 'o-1' }));
     expect(result.status).toBe(409);
     expect(result.body).toEqual({
       code: 'PENDING_ORDER_EXISTS',
-      message: 'PENDING_ORDER_EXISTS',
+      message: 'Đã có đơn chờ thanh toán cho gói này',
       details: { orderId: 'o-1' },
     });
+  });
+
+  it('AppError có message riêng thì dùng message đó', () => {
+    expect(toErrorResponse(new AppError('VALIDATION_ERROR', [], 'Gói đã ngừng bán')).body.message).toBe(
+      'Gói đã ngừng bán',
+    );
   });
 
   it('lỗi có sẵn của Nest đổi sang mã chung', () => {

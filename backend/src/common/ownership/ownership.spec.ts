@@ -33,13 +33,13 @@ describe('Kiểm tra quyền sở hữu', () => {
   it('không có quyền thì NOT_FOUND, không lộ là có tồn tại', () => {
     const run = () => assertOwnership(member, { memberUserId: 'u-khac' });
     expect(run).toThrow(AppError);
-    expect(run).toThrow('NOT_FOUND');
+    expect(run).toThrow(expect.objectContaining({ code: 'NOT_FOUND' }));
     expect(() => assertOwnership(member, owners)).not.toThrow();
   });
 
   it('assertFound ném NOT_FOUND khi null hoặc undefined', () => {
-    expect(() => assertFound(null)).toThrow('NOT_FOUND');
-    expect(() => assertFound(undefined)).toThrow('NOT_FOUND');
+    expect(() => assertFound(null)).toThrow(expect.objectContaining({ code: 'NOT_FOUND' }));
+    expect(() => assertFound(undefined)).toThrow(expect.objectContaining({ code: 'NOT_FOUND' }));
     expect(() => assertFound({ id: 'x' })).not.toThrow();
   });
 });
