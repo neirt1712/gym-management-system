@@ -12,12 +12,13 @@ openapi: 3.1.0
 
 info:
   title: Gym Management API
-  version: 0.2.1
+  version: 0.2.2
   description: |
     Hợp đồng API giữa backend (NestJS) và frontend (React) của hệ thống quản lý phòng gym.
 
     **Phiên bản 0.2** đủ 16 nhóm, 74 API theo `docs/spec/api-v3.md`, cộng 2 endpoint theo câu hỏi
-    đã chốt (Q6 tạo lại QR, Q15 đặt lại mật khẩu tại quầy). Chỗ còn chờ trả lời ghi "Chưa chốt (Qxx)".
+    đã chốt (Q6 tạo lại QR, Q15 đặt lại mật khẩu tại quầy). Các câu Q16, Q17, Q20, Q21 đã trả lời 05/11
+    (`docs/handoff/OPEN_QUESTIONS.md`); quy tắc ghi kèm số câu hỏi.
 
     Nguồn phạm vi: `docs/spec/api-v3.md`, `use-cases-v3.md`, `erd-v3.md`, `decisions.md`.
     Mã lỗi: `docs/api/error-codes.md`. Lịch sử thay đổi: `docs/api/CHANGELOG.md`.
@@ -344,9 +345,8 @@ paths:
         - Để không lộ SĐT nào đã đăng ký, BE luôn trả `202` khi SĐT không tồn tại.
         - Giới hạn tần suất: gọi quá nhiều lần trả `429 RATE_LIMITED`.
 
-        **Chưa chốt (Q16, Q17):** tài khoản **không có email** (Q15) cần mã lỗi riêng để FE hiện
-        "Liên hệ quầy để đặt lại mật khẩu". Nhưng trả mã riêng sẽ cho người lạ biết SĐT đó đã đăng ký,
-        ngược với quy tắc "luôn trả 202" ở trên. Chờ chốt; trong lúc chờ, BE trả `202`.
+        - Tài khoản **không có email** (Q15) cũng trả `202`, không có mã lỗi riêng (Q16, Q17a), để người lạ không
+          biết SĐT đã đăng ký. FE luôn ghi "Không nhận được email thì liên hệ quầy để đặt lại mật khẩu".
       security: []
       requestBody:
         required: true
@@ -824,7 +824,7 @@ paths:
         - MEMBER: luôn chỉ thấy đơn của mình, `memberId` bị bỏ qua.
         - Sắp xếp: mới nhất trước.
         - `from`, `to` lọc theo ngày tạo đơn (giờ Việt Nam).
-        - STAFF xem được đơn mọi ngày (Triển tạm chốt Q17c 20/10: quyết định 19 chỉ giới hạn giao dịch; quầy cần
+        - STAFF xem được đơn mọi ngày (Q24a, Triển tạm chốt Q17c 20/10, chờ Huy Trường duyệt: quyết định 19 chỉ giới hạn giao dịch; quầy cần
           tra đơn chờ trả của hội viên). Chờ Huy Trường duyệt.
       parameters:
         - $ref: '#/components/parameters/Page'
@@ -937,8 +937,7 @@ paths:
           rồi tạo payment mới. Mỗi đơn chỉ có tối đa 1 payment `PENDING`.
         - `amount` luôn bằng `total` của đơn; FE không gửi số tiền.
         - Đơn không còn `PENDING` (đã trả, đã hủy, quá hạn): `409 ORDER_NOT_PENDING` kèm `details.status` (Q16).
-        - MEMBER được tự chọn `CASH` để trả tại quầy (Triển tạm chốt Q17e 20/10 theo api-v3; đơn hết hạn cuối ngày).
-        - **Tạm thời (đến 28/10):** BE chưa nối VNPay sandbox, `method: VNPAY` trả `400` (`details[0].field = "method"`).
+        - MEMBER được tự chọn `CASH` để trả tại quầy (Q17e; đơn hết hạn cuối ngày, chờ Staff hoặc Admin xác nhận).
           Mock Prism vẫn trả ví dụ VNPay để FE dựng màn.
       requestBody:
         required: true
@@ -1106,8 +1105,9 @@ paths:
           `PAYMENT_FAILED`, trả `RspCode 00`. Sơ đồ: `docs/design/sequence-diagrams.md`.
         - VNPay có thể gọi lặp: lần sau trả `RspCode 02`, không tạo gói lần hai
           (chặn bằng unique `gateway_txn_id`).
-        - **Chưa chốt (Q17):** IPN báo thành công cho payment đã bị chuyển `FAILED` (người dùng bấm thanh toán
-          lại nhưng vẫn trả bằng link cũ).
+        - IPN báo thành công cho payment đã bị chuyển `FAILED` (bấm thanh toán lại nhưng trả bằng link cũ) (Q17d):
+          đơn còn `PENDING` thì vẫn ghi nhận và kích hoạt gói; đơn không còn `PENDING` thì chỉ lưu `gateway_payload`,
+          không kích hoạt, trả `RspCode 02`.
         - Response **không** theo dạng lỗi chung mà theo định dạng VNPay yêu cầu: luôn HTTP 200 với
           `{ RspCode, Message }`.
 
@@ -1224,9 +1224,8 @@ paths:
           `details.appointmentIds`; FE hiện các lịch vướng để hủy hoặc hoàn tất trước.
         - Thành công: gói `FROZEN`, thông báo cho hội viên, ghi `audit_logs` kèm `reason`.
         - Trong lúc bảo lưu, gói không dùng được để check-in (`SUBSCRIPTION_FROZEN`), đặt lịch PT hay đăng ký lớp.
-
         - Gói đã bảo lưu 1 lần: `409 FREEZE_LIMIT_REACHED` (Q21).
-        **Chưa chốt (Q20):** hết số ngày bảo lưu thì gói tự mở lại (cần thêm job) hay chờ Staff mở.
+        - Hết số ngày bảo lưu thì gói **tự mở lại** bằng job nền (Q20b), không chờ Staff.
       requestBody:
         required: true
         content:
@@ -1266,8 +1265,7 @@ paths:
         - Chỉ mở gói `FROZEN`: khác thì `409 SUBSCRIPTION_NOT_FROZEN`.
         - Gói về `ACTIVE`, `endsOn` được cộng thêm số ngày bảo lưu (BE tính, trả `endsOn` mới).
         - Thông báo cho hội viên, ghi `audit_logs`.
-
-        **Chưa chốt (Q20):** mở lại sớm hơn số ngày đã đăng ký thì cộng số ngày thực tế đã bảo lưu hay số ngày đã đăng ký.
+        - Mở lại sớm hơn số ngày đã đăng ký thì cộng **số ngày thực tế** đã bảo lưu (Q20b).
       responses:
         '200':
           description: Gói sau khi mở lại.
@@ -1305,7 +1303,8 @@ paths:
           3. Không có gói nào: `422 NO_ACTIVE_SUBSCRIPTION`. Gói gần nhất đã hết hạn: `422 SUBSCRIPTION_EXPIRED`.
              Gói đang bảo lưu: `422 SUBSCRIPTION_FROZEN`.
         - Check-in **không trừ** buổi PT.
-        - **Chưa chốt (Q17):** gói đã mua nhưng chưa tới `startsOn`; gói PT có được vào phòng tập tự do không.
+        - Gói đã mua nhưng chưa tới `startsOn` không tính: không còn gói nào khác thì `422 NO_ACTIVE_SUBSCRIPTION` (Q17b).
+        - Gói PT `ACTIVE` cũng được vào phòng tập tự do (Q17b).
       requestBody:
         required: true
         content:
@@ -1803,8 +1802,8 @@ paths:
           BE kiểm lại lần quyết định khi đồng ý (`/accept`).
         - Gửi thông báo cho PT.
 
-        **Chưa chốt (Q20):** giờ đề xuất có bắt buộc nằm trong khung rảnh của PT không. Trong lúc chờ, BE không chặn;
-        FE cho chọn giờ từ `GET /trainers/{id}/availability`.
+        - Giờ đề xuất **không bắt buộc** nằm trong khung rảnh của PT, BE không chặn (Q20c). FE chỉ cho chọn giờ từ
+          `GET /trainers/{id}/availability`.
       requestBody:
         required: true
         content:
@@ -1906,7 +1905,7 @@ paths:
         | Tình huống | Ai | allowedActions |
         | --- | --- | --- |
         | PENDING | Bên đang được hỏi | `ACCEPT`, `REJECT`, `COUNTER` |
-        | CONFIRMED, chưa tới giờ bắt đầu (Chưa chốt Q20e), không có đề xuất OPEN | Hội viên hoặc PT của lịch | `RESCHEDULE`, `CANCEL` |
+        | CONFIRMED, chưa tới giờ bắt đầu (Q20e), không có đề xuất OPEN | Hội viên hoặc PT của lịch | `RESCHEDULE`, `CANCEL` |
         | CONFIRMED, có đề xuất RESCHEDULE/CANCEL đang OPEN | Bên đang được hỏi | `ACCEPT`, `REJECT` |
         | CONFIRMED, đã qua giờ kết thúc | PT của lịch, ADMIN | `COMPLETE` |
         | Còn lại (gồm STAFF) | | `[]` |
@@ -2080,7 +2079,7 @@ paths:
 
         - Chỉ lịch `CONFIRMED` và **đã qua `endsAt`**; chưa tới giờ thì `422 SESSION_NOT_ENDED`.
         - `COMPLETED` (đã tập) hoặc `NO_SHOW` (vắng): **cả hai đều trừ 1 buổi**.
-        - Lưu người xác nhận và thời điểm. Đề xuất RESCHEDULE/CANCEL còn OPEN (nếu có) chuyển `SUPERSEDED` (Chưa chốt Q20i).
+        - Lưu người xác nhận và thời điểm. Đề xuất RESCHEDULE/CANCEL còn OPEN (nếu có) chuyển `SUPERSEDED` (Q20i).
         - Thứ tự kiểm: `409 STALE_VERSION` → `403 FORBIDDEN` → `422 SESSION_NOT_ENDED`.
       requestBody:
         required: true
@@ -2164,7 +2163,7 @@ paths:
         - `planId` (không bắt buộc) phải là kế hoạch của hội viên này.
         - Có cả `planId` và `progressPercent` thì BE cập nhật luôn `progressPercent` của kế hoạch đó.
 
-        **Chưa chốt (Q20):** Admin có được ghi chú không (api-v3 ghi "Admin" chung cho nhóm). Trong lúc chờ, chỉ PT ghi.
+        Chỉ PT ghi; Admin chỉ xem ghi chú (Q20h).
       requestBody:
         required: true
         content:
@@ -2227,7 +2226,7 @@ paths:
       description: |
         **Quyền:** TRAINER (hội viên mình phụ trách) · **UC30**
 
-        Kế hoạch mới có `progressPercent = 0` nếu không gửi. **Chưa chốt (Q20):** Admin có được lập kế hoạch không.
+        Kế hoạch mới có `progressPercent = 0` nếu không gửi. Admin chỉ xem, không lập kế hoạch (Q20h).
       requestBody:
         required: true
         content:
@@ -2261,7 +2260,7 @@ paths:
       description: |
         **Quyền:** TRAINER đã lập kế hoạch (và vẫn phụ trách hội viên) · **UC30**
 
-        Chỉ gửi field muốn đổi. Gửi `exercises` là **thay cả danh sách**. **Chưa chốt (Q20h):** Admin có được sửa không.
+        Chỉ gửi field muốn đổi. Gửi `exercises` là **thay cả danh sách**. Admin không sửa được (Q20h).
       requestBody:
         required: true
         content:
@@ -2623,11 +2622,10 @@ paths:
         **Quyền:** ADMIN · **UC36**
 
         - Chỉ gửi field muốn đổi. Đổi PT hoặc giờ thì kiểm trùng như khi tạo (`409 SCHEDULE_CONFLICT`).
-        - `capacity` không nhỏ hơn số người đang đăng ký: `400 VALIDATION_ERROR` (Chưa chốt Q20i).
+        - `capacity` không nhỏ hơn số người đang đăng ký: `400 VALIDATION_ERROR` (Q20i).
         - Hủy lớp: `status: CANCELLED`, gửi thông báo cho người đã đăng ký (be-plan tuần 7). Không mở lại lớp đã hủy,
-          tạo lớp mới (Chưa chốt Q20i).
-
-        **Chưa chốt (Q20):** khi hủy lớp, các đăng ký `REGISTERED` giữ nguyên hay chuyển `CANCELLED`.
+          tạo lớp mới (Q20i).
+        - Hủy lớp thì các đăng ký `REGISTERED` chuyển `CANCELLED` và người đăng ký nhận thông báo (Q20a).
       requestBody:
         required: true
         content:
@@ -2783,7 +2781,7 @@ paths:
         - `expiringSoon`: số gói ACTIVE hết hạn trong 7 ngày tới, tính từ hôm nay.
         - `newMembers`, `checkIns`, `popularPackages` tính trong `from`..`to`. `popularPackages`: tối đa 5 gói nhiều đơn PAID nhất.
 
-        **Chưa chốt (Q20):** "hội viên mới" tính theo đơn PAID đầu tiên trong khoảng hay theo ngày tạo tài khoản.
+        - "Hội viên mới" = hội viên có đơn `PAID` **đầu tiên** nằm trong `from`..`to` (Q20f).
       parameters:
         - $ref: '#/components/parameters/FromDate'
         - $ref: '#/components/parameters/ToDate'
@@ -2976,7 +2974,7 @@ paths:
         - Gửi cho mọi tài khoản `ACTIVE` thuộc các vai trò trong `roles`.
         - Trả số người nhận.
 
-        **Chưa chốt (Q20):** chọn người nhận theo vai trò, hay cần thêm nhóm "hội viên có gói ACTIVE".
+        - Chọn người nhận theo vai trò (Q20g), không có nhóm "hội viên có gói ACTIVE".
       requestBody:
         required: true
         content:
