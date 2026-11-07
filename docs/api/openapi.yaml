@@ -12,7 +12,7 @@ openapi: 3.1.0
 
 info:
   title: Gym Management API
-  version: 0.2.0
+  version: 0.2.1
   description: |
     Hợp đồng API giữa backend (NestJS) và frontend (React) của hệ thống quản lý phòng gym.
 
@@ -773,6 +773,9 @@ paths:
           FE mở lại đơn đó thay vì tạo mới.
         - `expiresAt` là hạn thanh toán, BE tính lúc chọn phương thức (VNPay 30 phút, tiền mặt hết ngày);
           trước khi chọn là hết ngày.
+        - Gia hạn: `renewalOf` của hội viên khác hoặc không tồn tại là `404`; gói đã `CANCELLED` là `400`
+          (`details[0].field = "renewalOf"`). Gói cũ đã hết hạn thì mặc định bắt đầu hôm nay.
+        - Đơn `PENDING` cũ đã quá hạn (job chưa kịp chạy) được chuyển `EXPIRED` trước, không chặn đơn mới.
       requestBody:
         required: true
         content:
@@ -820,7 +823,9 @@ paths:
 
         - MEMBER: luôn chỉ thấy đơn của mình, `memberId` bị bỏ qua.
         - Sắp xếp: mới nhất trước.
-        - **Chưa chốt (Q17):** STAFF có bị giới hạn đơn trong ngày như `GET /payments` (quyết định 19) không.
+        - `from`, `to` lọc theo ngày tạo đơn (giờ Việt Nam).
+        - STAFF xem được đơn mọi ngày (Triển tạm chốt Q17c 20/10: quyết định 19 chỉ giới hạn giao dịch; quầy cần
+          tra đơn chờ trả của hội viên). Chờ Huy Trường duyệt.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
@@ -885,10 +890,9 @@ paths:
         **Quyền:** MEMBER (của mình), STAFF, ADMIN · **UC09**
 
         - Chỉ hủy được đơn `PENDING`. Payment `PENDING` của đơn chuyển `FAILED`.
-        - Staff/Admin hủy hộ thì ghi `audit_logs` kèm `reason`.
+        - Staff/Admin hủy hộ **bắt buộc** `reason` (thiếu thì `400`, `details[0].field = "reason"`) và ghi `audit_logs`.
         - Gửi lặp khi đơn đã `CANCELLED`: trả `200` với đơn hiện tại.
-
-        **Chưa chốt (Q16):** mã lỗi khi đơn đã `PAID` hoặc `EXPIRED`. Hồng Anh bổ sung vào `error-codes.md`.
+        - Đơn đã `PAID` hoặc `EXPIRED`: `409 ORDER_NOT_PENDING` kèm `details.status` (Q16).
       requestBody:
         required: false
         content:
@@ -903,7 +907,15 @@ paths:
               schema: { $ref: '#/components/schemas/Order' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Đơn không còn chờ thanh toán.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                ORDER_NOT_PENDING: { $ref: '#/components/examples/ErrOrderNotPending' }
 
   # ---------------------------------------------------------------------------
   # THANH TOÁN (5)
@@ -924,8 +936,10 @@ paths:
         - Đơn đã có payment `PENDING` (ví dụ bấm thanh toán lại): BE chuyển payment cũ sang `FAILED`
           rồi tạo payment mới. Mỗi đơn chỉ có tối đa 1 payment `PENDING`.
         - `amount` luôn bằng `total` của đơn; FE không gửi số tiền.
-
-        **Chưa chốt (Q16):** mã lỗi khi đơn không còn `PENDING` (đã trả, đã hủy, quá hạn).
+        - Đơn không còn `PENDING` (đã trả, đã hủy, quá hạn): `409 ORDER_NOT_PENDING` kèm `details.status` (Q16).
+        - MEMBER được tự chọn `CASH` để trả tại quầy (Triển tạm chốt Q17e 20/10 theo api-v3; đơn hết hạn cuối ngày).
+        - **Tạm thời (đến 28/10):** BE chưa nối VNPay sandbox, `method: VNPAY` trả `400` (`details[0].field = "method"`).
+          Mock Prism vẫn trả ví dụ VNPay để FE dựng màn.
       requestBody:
         required: true
         content:
@@ -949,7 +963,15 @@ paths:
                 cash: { $ref: '#/components/examples/PaymentCashPending' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Đơn không còn chờ thanh toán.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                ORDER_NOT_PENDING: { $ref: '#/components/examples/ErrOrderNotPending' }
 
   /payments:
     get:
@@ -962,6 +984,7 @@ paths:
         - MEMBER: chỉ thấy giao dịch của mình.
         - STAFF: chỉ xem giao dịch **hôm nay** để đối soát tiền mặt (quyết định 19); `from`, `to` bị
           BE đặt về hôm nay.
+        - `from`, `to` lọc theo ngày tạo giao dịch (giờ Việt Nam).
         - Sắp xếp: mới nhất trước.
       parameters:
         - $ref: '#/components/parameters/Page'
@@ -1002,6 +1025,8 @@ paths:
       summary: Xem chi tiết giao dịch
       description: |
         **Quyền:** MEMBER (của mình), STAFF (trong ngày), ADMIN · **UC14**
+
+        - STAFF xem giao dịch tạo ngày khác: `404 NOT_FOUND`.
       responses:
         '200':
           description: Chi tiết giao dịch.
@@ -1028,7 +1053,10 @@ paths:
         - Thành công, trong **một transaction**: payment `SUCCESS` → đơn `PAID` + `receiptNo` → tạo gói hội viên
           `ACTIVE` → thông báo cho hội viên → ghi `audit_logs`.
         - Gửi lặp khi payment đã `SUCCESS`: trả `200` với kết quả cũ, không tạo gói lần hai.
-        - Payment không phải `CASH`: `400 VALIDATION_ERROR`.
+        - Payment không phải `CASH`, hoặc đã `FAILED` vì bị thay bằng lần thanh toán khác: `400 VALIDATION_ERROR`
+          (`details[0].field = "id"`).
+        - Đơn không còn `PENDING` (đã hủy, quá hạn cuối ngày): `409 ORDER_NOT_PENDING` kèm `details.status`.
+        - Số biên lai dạng `BL-YYYYMMDD-NNNN`, đánh lại từ `0001` mỗi ngày (giờ Việt Nam).
       requestBody:
         required: true
         content:
@@ -1047,6 +1075,13 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Đơn không còn chờ thanh toán.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                ORDER_NOT_PENDING: { $ref: '#/components/examples/ErrOrderNotPending' }
         '422':
           description: Số tiền nhận khác số tiền cần thu.
           content:
@@ -1190,7 +1225,7 @@ paths:
         - Thành công: gói `FROZEN`, thông báo cho hội viên, ghi `audit_logs` kèm `reason`.
         - Trong lúc bảo lưu, gói không dùng được để check-in (`SUBSCRIPTION_FROZEN`), đặt lịch PT hay đăng ký lớp.
 
-        **Chưa chốt (Q21):** mã lỗi khi gói đã bảo lưu 1 lần (Hồng Anh bổ sung vào `error-codes.md`).
+        - Gói đã bảo lưu 1 lần: `409 FREEZE_LIMIT_REACHED` (Q21).
         **Chưa chốt (Q20):** hết số ngày bảo lưu thì gói tự mở lại (cần thêm job) hay chờ Staff mở.
       requestBody:
         required: true
@@ -1216,6 +1251,7 @@ paths:
               examples:
                 SUBSCRIPTION_NOT_ACTIVE: { $ref: '#/components/examples/ErrSubscriptionNotActive' }
                 FREEZE_BLOCKED_BY_APPOINTMENTS: { $ref: '#/components/examples/ErrFreezeBlockedByAppointments' }
+                FREEZE_LIMIT_REACHED: { $ref: '#/components/examples/ErrFreezeLimitReached' }
 
   /subscriptions/{id}/unfreeze:
     parameters:
@@ -1760,7 +1796,7 @@ paths:
           Staff đề xuất hộ thì đề xuất ghi là của bên hội viên (`proposedRole = MEMBER`).
         - `endsAt` = `startsAt` + số phút mỗi buổi của gói (BE tính).
         - Điều kiện, sai thì `400 VALIDATION_ERROR`: gói là gói PT `ACTIVE` của hội viên (`subscriptionId`);
-          PT đang `ACTIVE` (`trainerId`); `startsAt` ở tương lai. **Chưa chốt (Q21):** có cần mã lỗi riêng cho hai điều kiện đầu.
+          PT đang `ACTIVE` (`trainerId`); `startsAt` ở tương lai. Q21: hai điều kiện đầu giữ `400 VALIDATION_ERROR` kèm field, không có mã riêng.
         - Hết buổi có thể đặt: `422 NO_SESSIONS_AVAILABLE`. Giờ nằm ngoài `startsOn`..`endsOn` của gói:
           `422 OUTSIDE_SUBSCRIPTION_PERIOD`.
         - Trùng lịch CONFIRMED của PT hoặc hội viên, hoặc trùng lớp của PT: `409 SCHEDULE_CONFLICT`.
@@ -2637,7 +2673,7 @@ paths:
         - Lớp đủ chỗ: `409 CLASS_FULL`.
         - Đã đăng ký rồi (gửi lặp): trả `200` với đăng ký hiện tại.
 
-        **Chưa chốt (Q21):** mã lỗi khi lớp đã hủy hoặc đã bắt đầu (Hồng Anh bổ sung vào `error-codes.md`).
+        - Lớp đã hủy hoặc đã bắt đầu: `409 CLASS_NOT_OPEN` (Q21).
       responses:
         '200':
           description: Đã đăng ký từ trước.
@@ -2655,12 +2691,13 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: Lớp đã đủ chỗ.
+          description: Lớp đã đủ chỗ, hoặc đã hủy/đã bắt đầu.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 CLASS_FULL: { $ref: '#/components/examples/ErrClassFull' }
+                CLASS_NOT_OPEN: { $ref: '#/components/examples/ErrClassNotOpen' }
         '422':
           description: Gói không gồm quyền vào lớp.
           content:
@@ -3239,6 +3276,9 @@ components:
         - CLASS_FULL
         - CANCELLATION_WINDOW_PASSED
         - ROLE_CHANGE_NOT_ALLOWED
+        - ORDER_NOT_PENDING
+        - FREEZE_LIMIT_REACHED
+        - CLASS_NOT_OPEN
         - RATE_LIMITED
         - INTERNAL_ERROR
 
@@ -3263,6 +3303,7 @@ components:
                 - `ACCOUNT_TEMPORARILY_LOCKED`, `RATE_LIMITED`: `{ retryAfterSeconds }`.
                 - `ALREADY_CHECKED_IN`: `{ checkInId }`. `CASH_AMOUNT_MISMATCH`: `{ expectedAmount }`.
                 - `FREEZE_BLOCKED_BY_APPOINTMENTS`: `{ appointmentIds }`.
+                - `ORDER_NOT_PENDING`: `{ status }` (trạng thái hiện tại của đơn: `PAID`, `CANCELLED`, `EXPIRED`).
                 - Mã khác: `null`.
               oneOf:
                 - type: 'null'
@@ -3564,12 +3605,12 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DateTime'
             - type: 'null'
-        receiptNo: { type: [string, 'null'], description: 'Số biên lai, có khi PAID.' }
+        receiptNo: { type: [string, 'null'], description: 'Số biên lai dạng `BL-YYYYMMDD-NNNN`, có khi PAID.' }
         subscriptionId: { type: [string, 'null'], format: uuid, description: 'Gói hội viên sinh ra, có khi PAID.' }
         createdBy: { $ref: '#/components/schemas/UserRef' }
         createdAt:
           $ref: '#/components/schemas/DateTime'
-          description: Cần cột `orders.created_at`, ERD v3 chưa có (Q16).
+          description: Thời điểm tạo đơn (cột `orders.created_at`, thêm theo Q16).
         payments:
           type: array
           description: Các lần thanh toán của đơn, mới nhất trước.
@@ -3634,7 +3675,7 @@ components:
             - type: 'null'
         createdAt:
           $ref: '#/components/schemas/DateTime'
-          description: Cần cột `payments.created_at`, ERD v3 chưa có (Q16).
+          description: Thời điểm tạo giao dịch (cột `payments.created_at`, thêm theo Q16).
     Payment:
       type: object
       required: [id, orderId, member, method, amount, status, merchantRef, gatewayTxnId, checkoutUrl, confirmedBy, paidAt, createdAt]
@@ -3662,7 +3703,7 @@ components:
             - type: 'null'
         createdAt:
           $ref: '#/components/schemas/DateTime'
-          description: Cần cột `payments.created_at`, ERD v3 chưa có (Q16).
+          description: Thời điểm tạo giao dịch (cột `payments.created_at`, thêm theo Q16).
     VnpayIpnResponse:
       type: object
       required: [RspCode, Message]
@@ -5081,6 +5122,9 @@ components:
     ErrPendingOrderExists:
       summary: PENDING_ORDER_EXISTS
       value: { error: { code: PENDING_ORDER_EXISTS, message: Đã có đơn chờ thanh toán cho gói này, details: { orderId: 99999999-9999-4999-8999-999999999999 }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrOrderNotPending:
+      summary: ORDER_NOT_PENDING
+      value: { error: { code: ORDER_NOT_PENDING, message: Đơn không còn chờ thanh toán, details: { status: PAID }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
     ErrCashAmountMismatch:
       summary: CASH_AMOUNT_MISMATCH
       value: { error: { code: CASH_AMOUNT_MISMATCH, message: Số tiền nhận khác số tiền cần thu, details: { expectedAmount: 500000 }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
@@ -5111,6 +5155,9 @@ components:
     ErrFreezeBlockedByAppointments:
       summary: FREEZE_BLOCKED_BY_APPOINTMENTS
       value: { error: { code: FREEZE_BLOCKED_BY_APPOINTMENTS, message: Gói còn lịch PT sắp tới, details: { appointmentIds: [eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee] }, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrFreezeLimitReached:
+      summary: FREEZE_LIMIT_REACHED
+      value: { error: { code: FREEZE_LIMIT_REACHED, message: Gói đã bảo lưu 1 lần, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
     ErrScheduleConflict:
       summary: SCHEDULE_CONFLICT
       value: { error: { code: SCHEDULE_CONFLICT, message: 'Trùng lịch PT, hội viên hoặc lớp', details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
@@ -5132,6 +5179,9 @@ components:
     ErrClassFull:
       summary: CLASS_FULL
       value: { error: { code: CLASS_FULL, message: Lớp đã đủ chỗ, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
+    ErrClassNotOpen:
+      summary: CLASS_NOT_OPEN
+      value: { error: { code: CLASS_NOT_OPEN, message: Lớp đã hủy hoặc đã bắt đầu, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }
     ErrCancellationWindowPassed:
       summary: CANCELLATION_WINDOW_PASSED
       value: { error: { code: CANCELLATION_WINDOW_PASSED, message: Đã quá hạn hủy đăng ký, details: null, requestId: 3f2a9c1e-7b4d-4e8a-9f1c-2d3e4f5a6b7c } }

@@ -1,6 +1,7 @@
 import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { isUUID } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppError } from '../errors/app-error';
 import type { AuthUser, RequestWithContext } from '../http/request-context';
@@ -52,7 +53,8 @@ export class JwtAuthGuard implements CanActivate {
     } catch {
       throw new AppError('UNAUTHENTICATED');
     }
-    if (!isPayload(payload)) throw new AppError('UNAUTHENTICATED');
+    // sub không phải UUID thì Prisma báo lỗi kiểu dữ liệu (500), nên chặn trước bằng 401
+    if (!isPayload(payload) || !isUUID(payload.sub)) throw new AppError('UNAUTHENTICATED');
 
     // So với users.token_version: cách thu hồi mọi phiên khi khóa tài khoản hoặc đổi mật khẩu (ADR 0001).
     const user = await this.prisma.user.findUnique({

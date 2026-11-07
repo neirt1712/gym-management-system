@@ -83,12 +83,12 @@ export class OrdersService {
     }
   }
 
-  /** UC14. MEMBER chỉ thấy đơn của mình; STAFF chỉ thấy đơn trong ngày (Q17c). */
+  /**
+   * UC14. MEMBER chỉ thấy đơn của mình. STAFF xem đơn mọi ngày (Q24a, Triển tạm chốt Q17c):
+   * quyết định 19 chỉ giới hạn giao dịch, quầy cần tra đơn chờ trả của hội viên.
+   */
   async list(query: ListOrdersQueryDto, user: AuthUser) {
-    const today = todayVn();
-    const from = user.role === 'STAFF' ? today : query.from;
-    const to = user.role === 'STAFF' ? today : query.to;
-
+    const { from, to } = query;
     const where: Prisma.OrderWhereInput = {
       status: query.status,
       ...(user.role === 'MEMBER' ? { member: { userId: user.id } } : { memberId: query.memberId }),
@@ -122,14 +122,16 @@ export class OrdersService {
   /** UC14, UC12. Nguồn duy nhất để FE biết đã thanh toán xong. */
   async get(id: string, user: AuthUser) {
     const order = await this.load(id);
-    this.assertCanRead(order.member.userId, order.createdAt, user);
+    assertOwnership(user, { memberUserId: order.member.userId });
+    if (await this.expireIfOverdue(id)) return toOrderResponse(await this.load(id));
     return toOrderResponse(order);
   }
 
   /** UC09. Hủy lặp trả đơn hiện tại; Staff/Admin hủy hộ phải có lý do và ghi audit. */
   async cancel(id: string, dto: CancelOrderDto, user: AuthUser) {
     const current = await this.load(id);
-    this.assertCanRead(current.member.userId, current.createdAt, user);
+    assertOwnership(user, { memberUserId: current.member.userId });
+    await this.expireIfOverdue(id);
 
     const onBehalf = user.role !== 'MEMBER';
     if (onBehalf && !dto.reason?.trim()) throw fieldError('reason', 'Cần nhập lý do khi hủy hộ');
@@ -165,9 +167,20 @@ export class OrdersService {
     return order;
   }
 
-  private assertCanRead(memberUserId: string, createdAt: Date, user: AuthUser): void {
-    assertOwnership(user, { memberUserId });
-    if (user.role === 'STAFF' && todayVn(createdAt) !== todayVn()) throw new AppError('NOT_FOUND');
+  /**
+   * Q24e: job "hết hạn đơn" (tuần 7) chưa có, nên đơn PENDING quá hạn chuyển EXPIRED ngay khi được đọc;
+   * payment đang chờ chuyển FAILED như khi hủy đơn. Trả true nếu vừa đổi.
+   */
+  private async expireIfOverdue(id: string): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.order.updateMany({
+        where: { id, status: 'PENDING', expiresAt: { lt: new Date() } },
+        data: { status: 'EXPIRED' },
+      });
+      if (count === 0) return false;
+      await tx.payment.updateMany({ where: { orderId: id, status: 'PENDING' }, data: { status: 'FAILED' } });
+      return true;
+    });
   }
 
   /** Phần dùng chung của báo giá và tạo đơn: kiểm tra gói, hội viên, gia hạn, tính ngày. */
@@ -183,8 +196,11 @@ export class OrdersService {
     if (dto.renewalOf) {
       const source = await this.prisma.subscription.findUnique({ where: { id: dto.renewalOf } });
       if (!source || source.memberId !== memberId) throw new AppError('NOT_FOUND');
+      if (source.status === 'CANCELLED') throw fieldError('renewalOf', 'Không gia hạn được gói đã hủy');
       renewalOf = source.id;
-      startsOn ??= addDays(toDateOnly(source.endsOn), 1);
+      // Q24d: gói cũ đã hết hạn thì gói mới mặc định bắt đầu hôm nay, không lùi về quá khứ
+      const afterSource = addDays(toDateOnly(source.endsOn), 1);
+      startsOn ??= afterSource > todayVn() ? afterSource : todayVn();
     }
 
     const today = todayVn();

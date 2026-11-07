@@ -4,6 +4,27 @@
 - **Ai đọc:** Sơn, Bằng (FE), Hồng Anh (BE), Huy Trường (test).
 - Ký hiệu: **Thêm** · **Đổi** (có thể làm hỏng code đang dùng) · **Bỏ**.
 
+## 0.2.1 — 20/10/2026
+
+Đóng phần mã lỗi của Q16, Q21 (Hồng Anh trả lời 18/10 trong `error-codes.md`), ghi rõ quy tắc đơn và thanh toán tiền mặt
+khi làm BE tuần 3. Không đổi field, không đổi endpoint.
+
+**Thêm**
+- 3 mã lỗi: `409 ORDER_NOT_PENDING` (kèm `details.status`) ở `POST /orders/{id}/cancel`, `POST /orders/{id}/payments`,
+  `POST /payments/{id}/confirm-cash`; `409 FREEZE_LIMIT_REACHED` ở `POST /subscriptions/{id}/freeze`;
+  `409 CLASS_NOT_OPEN` ở `POST /classes/{id}/enrollments`. Mỗi mã có ví dụ cho mock Prism.
+- `403` ở hủy đơn và tạo thanh toán (PT gọi).
+
+**Đổi (mô tả, không đổi hợp đồng)**
+- Hủy đơn hộ (STAFF/ADMIN) **bắt buộc** `reason`; thiếu thì `400` ở field `reason`.
+- `confirm-cash`: payment đã bị thay bằng lần khác là `400` ở field `id`; số biên lai dạng `BL-YYYYMMDD-NNNN`.
+- `GET /orders`, `GET /payments`: `from`, `to` lọc theo ngày tạo (giờ Việt Nam). STAFF xem đơn mọi ngày (tạm chốt Q17c).
+- `GET /payments/{id}`: STAFF xem giao dịch ngày khác nhận `404`.
+- Gia hạn: `renewalOf` không phải của hội viên là `404`, gói đã hủy là `400`.
+- **Tạm thời đến 28/10:** BE thật trả `400` cho `method: VNPAY` (VNPay làm tuần 4). Mock Prism không đổi.
+
+**FE cần làm:** thêm 3 mã vào `frontend/src/lib/errors.ts` (câu hiển thị ở `error-codes.md`).
+
 ## 0.2.0 — 18/10/2026
 
 Đủ 74 API theo `docs/spec/api-v3.md` (thêm 7 nhóm, 36 API). Không đổi gì của bản 0.1, chỉ thêm.

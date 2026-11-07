@@ -5,6 +5,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import type { AccessTokenPayload } from '../src/common/auth/jwt-auth.guard';
+import { todayVn } from '../src/common/time/vn-date';
 import { signParams } from '../src/modules/payments/vnpay';
 import { PrismaService } from '../src/prisma/prisma.service';
 
@@ -449,6 +450,54 @@ describe('Đơn hàng, thanh toán, gói hội viên (e2e)', () => {
         .set('Authorization', admin())
         .expect(200);
       expect(asAdmin.body.meta.total).toBe(1);
+
+      // Q24a: giới hạn trong ngày chỉ áp cho giao dịch; Staff vẫn tra được đơn ngày cũ
+      const orders = await http()
+        .get('/api/v1/orders')
+        .query(query)
+        .set('Authorization', staff())
+        .expect(200);
+      expect(orders.body.meta.total).toBe(1);
+      await http().get(`/api/v1/orders/${orders.body.data[0].id}`).set('Authorization', staff()).expect(200);
+    });
+
+    it('Q24d: gia hạn gói đã hết hạn thì bắt đầu hôm nay; gói đã hủy thì VALIDATION_ERROR', async () => {
+      await buy();
+      const sub = await prisma.subscription.findFirstOrThrow();
+      await prisma.subscription.update({
+        where: { id: sub.id },
+        data: { status: 'EXPIRED', startsOn: new Date('2020-01-01'), endsOn: new Date('2020-01-31') },
+      });
+      const quote = await http()
+        .post('/api/v1/orders/quote')
+        .set('Authorization', an())
+        .send({ packageId: ID.gym, renewalOf: sub.id })
+        .expect(200);
+      expect(quote.body.startsOn).toBe(todayVn());
+
+      await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'CANCELLED' } });
+      const res = await http()
+        .post('/api/v1/orders/quote')
+        .set('Authorization', an())
+        .send({ packageId: ID.gym, renewalOf: sub.id })
+        .expect(400);
+      expect(res.body.error.details[0].field).toBe('renewalOf');
+    });
+
+    it('Q24e: đơn quá hạn chuyển EXPIRED khi xem lại, payment đang chờ chuyển FAILED', async () => {
+      const orderId = await createOrder();
+      await createPayment(orderId, 'CASH');
+      await prisma.order.update({ where: { id: orderId }, data: { expiresAt: new Date(Date.now() - 1000) } });
+
+      const res = await http().get(`/api/v1/orders/${orderId}`).set('Authorization', an()).expect(200);
+      expect(res.body.status).toBe('EXPIRED');
+      expect(res.body.payments[0].status).toBe('FAILED');
+      const cancel = await http()
+        .post(`/api/v1/orders/${orderId}/cancel`)
+        .set('Authorization', an())
+        .send({})
+        .expect(409);
+      expect(cancel.body.error).toMatchObject({ code: 'ORDER_NOT_PENDING', details: { status: 'EXPIRED' } });
     });
 
     it('gói của tôi có daysLeft; gói GYM không có số buổi; người khác 404', async () => {

@@ -29,7 +29,7 @@ export const ORDER_INCLUDE = {
   member: { include: { user: true } },
   package: true,
   creator: true,
-  subscription: { select: { id: true } },
+  subscription: { select: { id: true, packageName: true } },
   payments: { include: { confirmer: true }, orderBy: { createdAt: 'desc' } },
 } satisfies Prisma.OrderInclude;
 
@@ -53,7 +53,8 @@ const toReceipt = (order: OrderEntity) => {
     memberName: order.member.user.fullName,
     memberCode: order.member.memberCode,
     memberPhone: order.member.user.phone,
-    packageName: order.package.name,
+    // Q24g: tên gói lúc thanh toán (lưu ở gói hội viên), Admin đổi tên gói sau đó không đổi biên lai
+    packageName: order.subscription?.packageName ?? order.package.name,
     startsOn: toDateOnly(order.startsOn),
     endsOn: orderEndsOn(order),
     amount: paid.amount,
