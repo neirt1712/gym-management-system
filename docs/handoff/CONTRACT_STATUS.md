@@ -21,11 +21,11 @@ Giá trị:
 | Gói hội viên | 4 | Đủ | Chưa | Chưa | Đọc 23/10 (Triển); bảo lưu 13/11 (Hồng Anh) |
 | Check-in | 3 | Đủ | Chưa | Chưa | 23/10 (Hồng Anh) |
 | Hội viên | 4 | Đủ | Đang làm (đủ 4 API, chờ PR `honganhw3-members`; Real khi có staging 27/10) | Chưa | 21/10 (Hồng Anh) |
-| PT | 6 | Đủ | Chưa | Chưa | 04/11 (Hồng Anh) |
+| PT | 6 | Đủ | Đang làm (đủ 6 API, chờ PR `honganhw5-trainers`) | Chưa | 04/11 (Hồng Anh) |
 | Lịch PT | 7 | Đủ | Chưa | Chưa | 06/11; complete 12/11 (Triển) |
 | Theo dõi tập | 5 | Đủ | Chưa | Chưa | 13/11 (Hồng Anh) |
-| Tài khoản | 6 | Đủ | Chưa | Chưa | 16/10 (Hồng Anh) |
+| Tài khoản | 6 | Đủ | Đang làm (đủ 6 API, chờ PR `honganhw5-users`) | Chưa | 16/10 (Hồng Anh) |
 | Lớp học | 7 | Đủ | Chưa | Chưa | 20/11 (Triển) |
 | Báo cáo | 4 | Đủ | Chưa | Chưa | 26/11 (Triển) |
-| Thông báo | 3 | Đủ | Chưa | Chưa | 28/10; broadcast 20/11 (Hồng Anh) |
+| Thông báo | 3 | Đủ | Đang làm (2/3 API, chờ PR `honganhw5-notifications`; broadcast tuần 7) | Chưa | 28/10; broadcast 20/11 (Hồng Anh) |
 | Vận hành | 1 | Đủ | Chưa | — | 09/10 (Triển) |
