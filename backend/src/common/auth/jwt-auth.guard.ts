@@ -1,6 +1,7 @@
 import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../../prisma/prisma.service';
 import { AppError } from '../errors/app-error';
 import type { AuthUser, RequestWithContext } from '../http/request-context';
 import { IS_PUBLIC_KEY } from './decorators';
@@ -23,6 +24,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly jwt: JwtService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -52,8 +54,14 @@ export class JwtAuthGuard implements CanActivate {
     }
     if (!isPayload(payload)) throw new AppError('UNAUTHENTICATED');
 
-    // TODO(tuần 2, khi có Prisma): so payload.tv với users.token_version; khác thì UNAUTHENTICATED.
-    // Đây là cách thu hồi mọi phiên khi khóa tài khoản hoặc đổi mật khẩu (ADR 0001).
+    // So với users.token_version: cách thu hồi mọi phiên khi khóa tài khoản hoặc đổi mật khẩu (ADR 0001).
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { tokenVersion: true, status: true },
+    });
+    if (!user || user.status !== 'ACTIVE' || user.tokenVersion !== payload.tv) {
+      throw new AppError('UNAUTHENTICATED');
+    }
     return { id: payload.sub, role: payload.role, tokenVersion: payload.tv };
   }
 }

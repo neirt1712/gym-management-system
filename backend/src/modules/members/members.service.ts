@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { CreateMemberDto } from './dto/create-member.dto';
 import type { ListMembersQueryDto } from './dto/list-members-query.dto';
 import type { UpdateMemberDto } from './dto/update-member.dto';
+import { nextMemberCode } from './member-code';
 import {
   fromDateOnly,
   toMemberResponse,
@@ -100,11 +101,7 @@ export class MembersService {
     let memberId: string;
     try {
       memberId = await this.prisma.$transaction(async (tx) => {
-        // Khóa theo giao dịch để hai Staff tạo cùng lúc không sinh trùng mã HVxxxxxx
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('members.member_code'))`;
-        const [{ max }] = await tx.$queryRaw<{ max: string | null }[]>`
-          SELECT max(member_code) AS max FROM members WHERE member_code ~ '^HV[0-9]{6}$'`;
-        const next = max ? Number(max.slice(2)) + 1 : 1;
+        const memberCode = await nextMemberCode(tx);
 
         const created = await tx.user.create({
           data: {
@@ -118,7 +115,7 @@ export class MembersService {
         const member = await tx.member.create({
           data: {
             userId: created.id,
-            memberCode: `HV${String(next).padStart(6, '0')}`,
+            memberCode,
             qrToken: randomBytes(16).toString('hex'),
           },
         });
