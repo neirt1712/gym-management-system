@@ -13,7 +13,8 @@
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.json --runInBand",
     "prepare": "cd .. && husky",
-    "seed": "prisma db seed"
+    "seed": "prisma db seed",
+    "seed:demo": "ts-node prisma/seed-demo.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
