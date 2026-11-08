@@ -24,4 +24,12 @@ afterEach(() => {
   cleanup();
   sessionStorage.clear();
   vi.unstubAllGlobals();
+  // Các test trong một file dùng chung document. Modal, Drawer của Ant Design gắn style lên body/html và
+  // gỡ khi hiệu ứng đóng chạy xong; trên CI tải nặng test sau bắt đầu trước khi gỡ, nút bị chặn bấm
+  // (pointer-events: none). Dọn sạch để mỗi test bắt đầu từ trang trắng.
+  document.body.removeAttribute('style');
+  document.body.removeAttribute('class');
+  document.body.innerHTML = '';
+  document.documentElement.removeAttribute('style');
+  document.documentElement.removeAttribute('class');
 });
