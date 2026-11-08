@@ -4,7 +4,7 @@ import type { AuthUser } from '../../common/http/request-context';
 import { ListNotificationsQueryDto } from './dto/list-notifications-query.dto';
 import { NotificationsService } from './notifications.service';
 
-/** Thông báo của tôi: UC42. Broadcast (UC43) làm ở tuần 7. */
+/** Thông báo của tôi: UC42. Mọi vai trò đã đăng nhập, chỉ thấy thông báo của mình. */
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notifications: NotificationsService) {}
