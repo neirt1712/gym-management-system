@@ -1,8 +1,11 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mockApi } from '../../test/mockApi';
 import { renderApp } from '../../test/renderApp';
+
+// Gõ nhiều ô và mở hộp thoại: máy chậm, CI tải nặng cần hơn 20 giây mặc định
+vi.setConfig({ testTimeout: 60_000 });
 
 const MEMBER = {
   id: '55555555-5555-4555-8555-555555555555',

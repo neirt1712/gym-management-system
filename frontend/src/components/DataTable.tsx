@@ -16,7 +16,11 @@ type Props<T> = {
   empty?: ReactNode;
 };
 
-/** Bảng danh sách dùng chung: phân trang theo `{data, meta}` của API, cuộn ngang trên màn hẹp. */
+/**
+ * Bảng danh sách dùng chung: phân trang theo `{data, meta}` của API, cuộn ngang trên màn hẹp.
+ * Lớp phủ "đang tải" chỉ hiện khi chưa có dữ liệu: lớp phủ chặn bấm, nên khi đang tải lại
+ * (đổi trang, sau khi xác nhận) vẫn giữ bảng cũ bấm được.
+ */
 export const DataTable = <T extends object>({
   columns,
   rows,
@@ -30,7 +34,7 @@ export const DataTable = <T extends object>({
     columns={columns}
     dataSource={rows}
     rowKey={rowKey}
-    loading={loading}
+    loading={!!loading && rows === undefined}
     scroll={{ x: 'max-content' }}
     locale={empty ? { emptyText: empty } : undefined}
     pagination={
