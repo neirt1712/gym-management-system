@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { AppError } from '../../common/errors/app-error';
+import { isEmptyPatch } from '../../common/http/patch';
 import type { AuthUser } from '../../common/http/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { fromDateOnly } from '../members/member.response';
@@ -31,7 +32,7 @@ export class MeService {
   /** UC05. Không đổi SĐT, vai trò, trạng thái ở đây; nhóm `trainer` chỉ PT được gửi. */
   async update(dto: UpdateMeDto, authUser: AuthUser) {
     const { trainer, dob, ...fields } = dto;
-    if (Object.keys(dto).length === 0) {
+    if (isEmptyPatch(dto)) {
       throw new AppError('VALIDATION_ERROR', [{ field: 'body', messages: ['Cần gửi ít nhất một field'] }]);
     }
     if (trainer && authUser.role !== 'TRAINER') {

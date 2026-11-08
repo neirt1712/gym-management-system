@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { isUUID } from 'class-validator';
 import { AuditService } from '../../common/audit/audit.service';
 import { AppError } from '../../common/errors/app-error';
+import { isEmptyPatch } from '../../common/http/patch';
 import type { AuthUser } from '../../common/http/request-context';
 import { pageMeta } from '../../common/notify';
 import { assertFound } from '../../common/ownership/ownership';
@@ -99,7 +100,7 @@ export class UsersService {
 
   /** UC33. Không đổi vai trò, trạng thái ở đây; `shift` chỉ cho STAFF. */
   async update(id: string, dto: UpdateUserDto) {
-    if (Object.keys(dto).length === 0) throw fieldError('body', 'Cần gửi ít nhất một field');
+    if (isEmptyPatch(dto)) throw fieldError('body', 'Cần gửi ít nhất một field');
     const current = await this.load(id);
     if (dto.shift !== undefined && current.role !== 'STAFF') throw fieldError('shift', 'Chỉ Staff có ca làm');
     await this.assertContactFree(dto.phone ?? null, dto.email ?? null, id);

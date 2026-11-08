@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, type AppointmentStatus } from '@prisma/client';
 import { isUUID } from 'class-validator';
 import { AppError } from '../../common/errors/app-error';
+import { isEmptyPatch } from '../../common/http/patch';
 import type { AuthUser } from '../../common/http/request-context';
 import { isExclusionViolation, pageMeta } from '../../common/notify';
 import { assertFound } from '../../common/ownership/ownership';
@@ -69,7 +70,7 @@ export class TrainersService {
 
   /** UC33. `fullName` lưu ở users; INACTIVE thì PT ngừng nhận lịch mới. */
   async update(id: string, dto: UpdateTrainerDto) {
-    if (Object.keys(dto).length === 0) throw fieldError('body', 'Cần gửi ít nhất một field');
+    if (isEmptyPatch(dto)) throw fieldError('body', 'Cần gửi ít nhất một field');
     const current = await this.load(id);
     const { fullName, ...fields } = dto;
     const trainer = await this.prisma.$transaction(async (tx) => {
