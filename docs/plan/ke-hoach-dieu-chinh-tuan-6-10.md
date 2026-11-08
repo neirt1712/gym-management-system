@@ -1,8 +1,8 @@
 # Dồn việc còn nợ tuần 1–5 (Sơn chốt 08/11/2026)
 
 **Quyết định của Sơn ngày 08/11:**
-- Mọi việc **backend** tuần 1–5 chưa xong (của Triển và Hồng Anh) **dồn hết cho Triển**, làm trong tuần 6. Prompt: `docs/handoff/handoffs/prompt-tuan-6-2026-11-08.md`.
-- Mọi việc **frontend** tuần 1–5 chưa xong (của Sơn và Bằng) **Sơn làm hết**, vì Bằng bận.
+- Mọi việc **backend** tuần 1–5 chưa xong (của Triển và Hồng Anh) **dồn hết cho Triển**, làm xong trong hôm nay 08/11 (ngày cuối tuần 5). Prompt: `docs/handoff/handoffs/prompt-tuan-6-2026-11-08.md`.
+- Mọi việc **frontend** tuần 1–5 chưa xong (của Sơn và Bằng) **Sơn làm hết trong hôm nay 08/11**, vì Bằng bận. Màn chưa có API thì dựng theo openapi, nối thật khi Triển xong.
 - Từ tuần 6 trở đi, mỗi người làm việc của tuần đó theo `be-plan.md`, `fe-plan.md` (phần của Bằng do Sơn làm). Chỉ chạy local (Q23): bỏ deploy staging.
 
 ## Backend còn nợ tuần 1–5 → Triển
@@ -38,5 +38,5 @@
 
 ## Rủi ro
 
-- Triển làm 8 việc nợ trong tuần 6 cộng việc tuần 6 của mình: nếu tới Thứ Tư 11/11 chưa xong #1–#3, báo Sơn để chia lại.
+- Triển làm 8 việc nợ trong một ngày: rất khó xong hết; việc nào dở thì báo Sơn ngay để quyết làm tiếp hay bỏ bớt.
 - Sơn làm 9 việc nợ FE: #5–#8 phụ thuộc thứ tự Triển xong backend.
