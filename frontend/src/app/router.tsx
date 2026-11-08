@@ -1,6 +1,15 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { AdminPackagesPage } from '../pages/admin/AdminPackagesPage';
+import { AdminTrainersPage } from '../pages/admin/AdminTrainersPage';
+import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
+import { AppointmentsPage } from '../pages/member/AppointmentsPage';
 import { MemberHomePage } from '../pages/member/MemberHomePage';
+import { NotificationsPage } from '../pages/NotificationsPage';
+import { TrainerProfilePage } from '../pages/public/TrainerProfilePage';
+import { TrainersPage } from '../pages/public/TrainersPage';
+import { AppointmentDetailPage } from '../pages/shared/AppointmentDetailPage';
+import { CheckInPage } from '../pages/staff/CheckInPage';
+import { TrainerAvailabilityPage } from '../pages/trainer/TrainerAvailabilityPage';
 import { OrderDetailPage } from '../pages/member/OrderDetailPage';
 import { OrdersPage } from '../pages/member/OrdersPage';
 import { ProfilePage } from '../pages/member/ProfilePage';
@@ -36,6 +45,12 @@ const READY: Record<string, RouteObject['element']> = {
   '/member': <MemberHomePage />,
   '/member/orders': <OrdersPage />,
   '/admin/packages': <AdminPackagesPage />,
+  '/admin/users': <AdminUsersPage />,
+  '/admin/trainers': <AdminTrainersPage />,
+  '/member/appointments': <AppointmentsPage />,
+  '/trainer/schedule': <AppointmentsPage />,
+  '/trainer/availability': <TrainerAvailabilityPage />,
+  '/staff/check-in': <CheckInPage />,
   '/staff/members': <StaffMembersPage />,
   '/staff/payments': <StaffPaymentsPage />,
 };
@@ -45,7 +60,9 @@ const EXTRA_ROUTES: Partial<Record<Role, RouteObject[]>> = {
     { path: '/member/purchase/:packageId', element: <PurchasePage /> },
     { path: '/member/orders/:id', element: <OrderDetailPage /> },
     { path: '/member/subscriptions/:id', element: <SubscriptionDetailPage /> },
+    { path: '/member/appointments/:id', element: <AppointmentDetailPage /> },
   ],
+  TRAINER: [{ path: '/trainer/appointments/:id', element: <AppointmentDetailPage /> }],
   STAFF: [{ path: '/staff/members/:id', element: <StaffMemberDetailPage /> }],
 };
 
@@ -65,7 +82,8 @@ export const routes: RouteObject[] = [
     children: [
       placeholder('/', 'Trang chủ', 'UC07', 'Bằng'),
       { path: '/packages', element: <PackagesPage /> },
-      placeholder('/trainers', 'Huấn luyện viên', 'UC21', 'Sơn'),
+      { path: '/trainers', element: <TrainersPage /> },
+      { path: '/trainers/:id', element: <TrainerProfilePage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
       placeholder('/forgot-password', 'Quên mật khẩu', 'UC04', 'Sơn'),
@@ -80,7 +98,7 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           { path: '/me/profile', element: <ProfilePage /> },
-          placeholder('/notifications', 'Thông báo', 'UC42', 'Bằng'),
+          { path: '/notifications', element: <NotificationsPage /> },
           roleRoutes('MEMBER'),
           roleRoutes('TRAINER'),
           roleRoutes('STAFF'),
