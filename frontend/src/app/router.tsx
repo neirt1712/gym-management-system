@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
+import { AdminPackagesPage } from '../pages/admin/AdminPackagesPage';
 import { MemberHomePage } from '../pages/member/MemberHomePage';
 import { OrderDetailPage } from '../pages/member/OrderDetailPage';
 import { OrdersPage } from '../pages/member/OrdersPage';
@@ -34,6 +35,7 @@ const placeholder = (path: string, title: string, uc: string, owner: string): Ro
 const READY: Record<string, RouteObject['element']> = {
   '/member': <MemberHomePage />,
   '/member/orders': <OrdersPage />,
+  '/admin/packages': <AdminPackagesPage />,
   '/staff/members': <StaffMembersPage />,
   '/staff/payments': <StaffPaymentsPage />,
 };

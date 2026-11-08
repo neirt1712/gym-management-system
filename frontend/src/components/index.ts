@@ -5,4 +5,5 @@
 export { DataTable, type PageMeta } from './DataTable';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
+export { MoneyInput } from './MoneyInput';
 export { PageHeader } from './PageHeader';
