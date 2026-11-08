@@ -60,7 +60,9 @@ describe('Gói tập (e2e)', () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
-    await app.init();
+    // Mở cổng một lần: để supertest tự mở rồi đóng server giữa các request thì có lúc request mới tới
+    // đúng lúc server vừa đóng (lỗi "reading 'address'" trên CI)
+    await app.listen(0, '127.0.0.1');
     jwt = moduleRef.get(JwtService);
     prisma = moduleRef.get(PrismaService);
 
