@@ -6,6 +6,7 @@
  */
 export const queryKeys = {
   me: ['me'] as const,
+  packages: (params?: object) => (params ? (['packages', 'list', params] as const) : (['packages'] as const)),
   package: (id: string) => ['packages', 'detail', id] as const,
   orders: (params?: object) => (params ? (['orders', 'list', params] as const) : (['orders'] as const)),
   order: (id: string) => ['orders', 'detail', id] as const,

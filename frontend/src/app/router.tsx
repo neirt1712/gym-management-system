@@ -6,6 +6,7 @@ import { ProfilePage } from '../pages/member/ProfilePage';
 import { PurchasePage } from '../pages/member/PurchasePage';
 import { SubscriptionDetailPage } from '../pages/member/SubscriptionDetailPage';
 import { LoginPage } from '../pages/public/LoginPage';
+import { PackagesPage } from '../pages/public/PackagesPage';
 import { RegisterPage } from '../pages/public/RegisterPage';
 import { RequireAuth } from './guards/RequireAuth';
 import { RequireRole } from './guards/RequireRole';
@@ -55,7 +56,7 @@ export const routes: RouteObject[] = [
     element: <PublicLayout />,
     children: [
       placeholder('/', 'Trang chủ', 'UC07', 'Bằng'),
-      placeholder('/packages', 'Gói tập', 'UC07', 'Bằng'),
+      { path: '/packages', element: <PackagesPage /> },
       placeholder('/trainers', 'Huấn luyện viên', 'UC21', 'Sơn'),
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
