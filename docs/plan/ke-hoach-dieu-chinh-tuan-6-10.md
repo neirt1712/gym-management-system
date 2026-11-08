@@ -1,73 +1,42 @@
-# Kế hoạch điều chỉnh tuần 6–10 (Sơn chốt 08/11/2026)
-
-File này thay phần tuần 6–10 trong `fe-plan.md` và `be-plan.md` cho tới khi Triển, Sơn sửa hai file đó cho khớp.
-Mốc: **đóng chức năng 30/11** · đóng băng bản demo 09/12 · nộp bài 12/12. Hạn mặc định là Thứ Sáu của tuần.
+# Dồn việc còn nợ tuần 1–5 (Sơn chốt 08/11/2026)
 
 **Quyết định của Sơn ngày 08/11:**
-- Bằng bận: **Sơn nhận toàn bộ FE của Bằng.**
-- Hồng Anh chưa push từ 18/10: **Triển nhận toàn bộ BE của Hồng Anh** (cả việc còn nợ tuần 2–5 và tuần 6–10). Hồng Anh chuyển sang review PR của Triển, tài liệu cài đặt, video demo.
-- Chỉ chạy local (Q23). `backend/CLAUDE.md` mục "Ai sở hữu gì" cần Triển sửa theo quyết định này.
+- Mọi việc **backend** tuần 1–5 chưa xong (của Triển và Hồng Anh) **dồn hết cho Triển**, làm trong tuần 6. Prompt: `docs/handoff/handoffs/prompt-tuan-6-2026-11-08.md`.
+- Mọi việc **frontend** tuần 1–5 chưa xong (của Sơn và Bằng) **Sơn làm hết**, vì Bằng bận.
+- Từ tuần 6 trở đi, mỗi người làm việc của tuần đó theo `be-plan.md`, `fe-plan.md` (phần của Bằng do Sơn làm). Chỉ chạy local (Q23): bỏ deploy staging.
 
-## Trạng thái ngày 08/11
+## Backend còn nợ tuần 1–5 → Triển
 
-| Mảng | Đã có | Còn nợ tới tuần 5 |
+| # | Việc | Tuần gốc, người gốc | Đang chặn |
+| --- | --- | --- | --- |
+| 1 | Chạy e2e, sửa, merge nhánh `tsonw4-tich-hop` (Auth, `/me`, đơn, thanh toán, gói hội viên) vào `develop` | 2–4, Triển | Mọi việc sau |
+| 2 | `users` 6 endpoint | 2, Hồng Anh | FE Admin tài khoản |
+| 3 | Lịch PT: tạo, list, detail + `allowedActions`, COUNTER, accept, reject, thông báo | 5, Triển | FE lịch PT |
+| 4 | PT: trainers list/detail/PATCH, availability GET/PUT, `GET /trainers/{id}/members` | 5, Hồng Anh | FE đặt lịch, khung giờ rảnh |
+| 5 | Check-in 3 endpoint + job 23:59 | 3, Hồng Anh | FE check-in |
+| 6 | `GET /notifications` (unreadCount), `PATCH /notifications/{id}/read` | 4, Hồng Anh | FE chuông thông báo |
+| 7 | Seed demo một lệnh | 4, Hồng Anh | Demo |
+| 8 | `POST /uploads/avatar` (lưu đĩa local) | 2, Triển | FE ảnh đại diện |
+
+Đã xong hoặc không làm nữa: GitHub Actions (đã có), thông báo PAYMENT_SUCCESS/FAILED (đã có), qrToken + tạo lại QR (đã có), deploy staging (bỏ theo Q23).
+
+## Frontend còn nợ tuần 1–5 → Sơn
+
+| # | Việc | Tuần gốc, người gốc |
 | --- | --- | --- |
-| BE (giờ là Triển) | Auth, `/me`, gói, hội viên, đơn, thanh toán (VNPay, tiền mặt, IPN), đọc gói hội viên, openapi 0.2.2, Postman, CI | `users`; check-in + job 23:59; seed demo; `GET /notifications` + đánh dấu đã đọc; lịch PT (đang làm); PT + khung giờ rảnh + hội viên của PT; e2e chưa chạy |
-| FE (giờ là Sơn) | Đăng ký, đăng nhập, hồ sơ, mua gói, đơn, kết quả VNPay, gói của tôi, QR, danh mục gói, màn quầy, component dùng chung | Admin, check-in, lịch PT, thông báo, responsive |
-| PM Huy Trường | Spec v3 | Spec theo Q4–Q24; test case; biên bản thật |
+| 1 | Admin quản lý gói (UC08) | 2, Bằng |
+| 2 | Bỏ mock, chạy với backend local; toast lỗi theo `error.code`; rà loading, rỗng, lỗi | 4, Sơn |
+| 3 | Danh sách + hồ sơ PT (UC21) | 5, Sơn |
+| 4 | Đề xuất lịch, chi tiết lịch (dòng thời gian, nút theo `allowedActions`, STALE_VERSION), `AppointmentCard`, `ProposalTimeline` | 5, Sơn |
+| 5 | Admin tài khoản (UC31–UC35) | 2, Bằng (chờ backend #2) |
+| 6 | Check-in QR và SĐT, đang tập, check-out | 3, Bằng (chờ backend #5) |
+| 7 | Chuông + danh sách thông báo | 4, Bằng (chờ backend #6) |
+| 8 | PT: khung giờ theo mẫu tuần, hộp yêu cầu chờ phản hồi; Admin quản lý PT | 5, Bằng (chờ backend #3, #4) |
+| 9 | Responsive màn quầy (tablet), đồng bộ giao diện các màn demo | 4, Bằng |
 
-## Triển: toàn bộ backend
-
-Thứ tự theo việc nào đang chặn FE trước. Mỗi việc một PR; Hồng Anh review trong 24 giờ.
-
-| Tuần | Việc | Hạn |
-| --- | --- | --- |
-| 6 (09–15/11) | 1. Chạy e2e, sửa, merge nhánh `tsonw4-tich-hop` vào `develop` | **T2 09/11** |
-| | 2. `users` 6 endpoint (Admin tài khoản) | T3 10/11 |
-| | 3. Lịch PT 7 API (đang làm): tạo, list, detail + `allowedActions`, COUNTER, accept, reject, RESCHEDULE/CANCEL | T4 11/11 |
-| | 4. Check-in 3 endpoint + job 23:59 (Q17b) | T6 13/11 |
-| 7 (16–22/11) | 5. Xác nhận buổi tập COMPLETED/NO_SHOW + thông báo đổi/hủy | T3 17/11 |
-| | 6. PT: trainers list/detail/PATCH, availability GET/PUT, `GET /trainers/{id}/members` | T4 18/11 |
-| | 7. Thông báo `GET /notifications` (unreadCount), `PATCH read` | T5 19/11 |
-| | 8. Seed demo một lệnh; bảo lưu / mở lại gói (Q20b) | T6 20/11 |
-| 8 (23–29/11) | 9. Lớp học: classes + enrollments | T3 24/11 |
-| | 10. Theo dõi tập: training-notes, training-plans | T4 25/11 |
-| | 11. Job: hết hạn gói, nhắc lịch, quá 24 giờ, hết hạn đơn; quên / đặt lại mật khẩu (MailHog); broadcast | T5 26/11 |
-| | 12. Báo cáo doanh thu + XLSX; `POST /uploads/avatar` (lưu đĩa local) | T6 27/11 |
-| 9 (30/11–06/12) | Sửa bug; rate limit, helmet, CORS; rà kiểm tra sở hữu; README chạy local | 06/12 |
-| 10 (07–13/12) | Chương cài đặt BE, slide kiến trúc BE | 11/12 |
-
-## Hồng Anh
-
-| Tuần | Việc |
-| --- | --- |
-| Ngay hôm nay | Push mọi code đang có trên máy (kể cả làm dở) lên nhánh riêng, báo Triển để Triển dùng lại, không làm trùng |
-| 6–9 | Review mọi PR backend của Triển trong 24 giờ (CONTRIBUTING: 1 review); chạy e2e trên máy mình khi review |
-| 9 | `INSTALL.md`: cài và chạy local từ đầu (Postgres hoặc Neon, migrate, seed, chạy BE, FE); seed 3 tháng cho báo cáo doanh thu |
-| 10 | Đóng băng bản demo 09/12; video demo; chương triển khai (chạy local) |
-
-## Sơn: toàn bộ frontend
-
-| Tuần | Việc |
-| --- | --- |
-| 6 | Admin quản lý gói (UC08); danh sách + hồ sơ PT (UC21); đặt lịch PT, chi tiết lịch, `AppointmentCard`, `ProposalTimeline` (mock trước, nối API khi Triển xong việc 3) |
-| 7 | Admin tài khoản (UC31–UC35); check-in quầy, đang tập, check-out; PT: khung giờ rảnh, hộp yêu cầu, lịch ngày/tuần/tháng; PT xác nhận buổi |
-| 8 | Thông báo (chuông, trung tâm, broadcast); bảo lưu; theo dõi tập; lớp học; Dashboard Admin; quên / đặt lại mật khẩu, kích hoạt |
-| 9 | Sửa bug; responsive; kiểm tra trình duyệt; 2 kịch bản Playwright luồng hội viên cho Huy Trường |
-| 10 | Chương cài đặt FE, slide FE, thao tác demo |
-
-## Huy Trường
-
-| Tuần | Việc |
-| --- | --- |
-| 6 | Cập nhật `docs/spec/` theo Q4–Q24; duyệt Q24; chạy Postman, mở Issue; test case UC01–UC15; biên bản họp thật 09/11 |
-| 7 | Test case + Postman cho lịch PT, check-in, tài khoản; chương Phân tích, Thiết kế |
-| 8 | Playwright 2 luồng hội viên + 1 luồng quầy; test hồi quy; chương Cài đặt phần đã có |
-| 9 | Test hồi quy, phân loại bug; ảnh màn hình; nháp báo cáo đủ chương **06/12** |
-| 10 | Gộp báo cáo **09/12**; slide; kịch bản demo; nộp **12/12** |
+Đã xong: component dùng chung bản đầu, danh mục gói, màn quầy (hội viên, mua hộ, thu tiền).
 
 ## Rủi ro
 
-1. **Triển gánh gần gấp đôi backend** (12 nhóm việc trong 3 tuần). Chậm hơn 2 ngày ở mốc nào thì báo ngay; nhóm họp, Huy Trường chọn bỏ bớt (gợi ý thứ tự bỏ: broadcast, xuất XLSX, avatar, nhắc lịch 2 giờ).
-2. **Sơn gánh gấp đôi frontend.** Tương tự; gợi ý bỏ: so sánh gói, biểu đồ số buổi theo tháng.
-3. **Từ 21/10 chưa có PR nào vào `develop`.** Merge nhánh tích hợp Thứ Hai 09/11 là việc mở đường cho cả nhóm.
+- Triển làm 8 việc nợ trong tuần 6 cộng việc tuần 6 của mình: nếu tới Thứ Tư 11/11 chưa xong #1–#3, báo Sơn để chia lại.
+- Sơn làm 9 việc nợ FE: #5–#8 phụ thuộc thứ tự Triển xong backend.
