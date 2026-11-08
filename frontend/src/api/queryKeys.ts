@@ -8,6 +8,8 @@ export const queryKeys = {
   me: ['me'] as const,
   packages: (params?: object) => (params ? (['packages', 'list', params] as const) : (['packages'] as const)),
   package: (id: string) => ['packages', 'detail', id] as const,
+  members: (params?: object) => (params ? (['members', 'list', params] as const) : (['members'] as const)),
+  member: (id: string) => ['members', 'detail', id] as const,
   orders: (params?: object) => (params ? (['orders', 'list', params] as const) : (['orders'] as const)),
   order: (id: string) => ['orders', 'detail', id] as const,
   payments: (params?: object) => (params ? (['payments', 'list', params] as const) : (['payments'] as const)),

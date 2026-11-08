@@ -83,6 +83,26 @@ export const useOrders = (params: OrderListQuery) =>
     placeholderData: keepPreviousData,
   });
 
+/**
+ * UC13 Quầy xác nhận đã nhận tiền mặt. `receivedAmount` phải bằng số cần thu (422 CASH_AMOUNT_MISMATCH).
+ * Thành công thì đơn PAID và gói hội viên được tạo, nên làm mới đơn, giao dịch và hồ sơ hội viên.
+ */
+export const useConfirmCash = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, receivedAmount }: { id: string; receivedAmount: number }) =>
+      unwrap(
+        await api.POST('/payments/{id}/confirm-cash', { params: { path: { id } }, body: { receivedAmount } }),
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.orders() });
+      void qc.invalidateQueries({ queryKey: queryKeys.payments() });
+      void qc.invalidateQueries({ queryKey: queryKeys.members() });
+      void qc.invalidateQueries({ queryKey: queryKeys.subscriptions() });
+    },
+  });
+};
+
 /** UC14 Lịch sử giao dịch của tôi. */
 export const usePayments = (params: PaymentListQuery) =>
   useQuery({

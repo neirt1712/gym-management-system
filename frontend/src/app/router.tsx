@@ -7,6 +7,9 @@ import { PurchasePage } from '../pages/member/PurchasePage';
 import { SubscriptionDetailPage } from '../pages/member/SubscriptionDetailPage';
 import { LoginPage } from '../pages/public/LoginPage';
 import { PackagesPage } from '../pages/public/PackagesPage';
+import { StaffMemberDetailPage } from '../pages/staff/StaffMemberDetailPage';
+import { StaffMembersPage } from '../pages/staff/StaffMembersPage';
+import { StaffPaymentsPage } from '../pages/staff/StaffPaymentsPage';
 import { RegisterPage } from '../pages/public/RegisterPage';
 import { RequireAuth } from './guards/RequireAuth';
 import { RequireRole } from './guards/RequireRole';
@@ -31,6 +34,8 @@ const placeholder = (path: string, title: string, uc: string, owner: string): Ro
 const READY: Record<string, RouteObject['element']> = {
   '/member': <MemberHomePage />,
   '/member/orders': <OrdersPage />,
+  '/staff/members': <StaffMembersPage />,
+  '/staff/payments': <StaffPaymentsPage />,
 };
 
 const EXTRA_ROUTES: Partial<Record<Role, RouteObject[]>> = {
@@ -39,6 +44,7 @@ const EXTRA_ROUTES: Partial<Record<Role, RouteObject[]>> = {
     { path: '/member/orders/:id', element: <OrderDetailPage /> },
     { path: '/member/subscriptions/:id', element: <SubscriptionDetailPage /> },
   ],
+  STAFF: [{ path: '/staff/members/:id', element: <StaffMemberDetailPage /> }],
 };
 
 const roleRoutes = (role: Role): RouteObject => ({
