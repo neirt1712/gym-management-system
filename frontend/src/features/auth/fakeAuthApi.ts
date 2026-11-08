@@ -55,11 +55,18 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
   },
 ];
 
+/** Khóa tạm sau 5 lần sai, theo mô tả `POST /auth/login` trong openapi. Bản thử khóa 60 giây cho dễ thử. */
+const MAX_FAILED_LOGINS = 5;
+const TEMP_LOCK_SECONDS = 60;
+
+/** SĐT có hồ sơ tạo tại quầy nhưng chưa kích hoạt, để thử lỗi ACTIVATION_REQUIRED khi đăng ký. */
+export const DESK_PROFILE_PHONE = '0907777777';
+
 /** Giả lập refresh cookie HttpOnly để tải lại trang vẫn giữ phiên. Không chứa token. */
 export const FAKE_SESSION_KEY = 'gym-fake-session';
 
-const apiError = (code: string, message: string) => ({
-  error: { code, message, details: null, requestId: `fake-${Date.now()}` },
+const apiError = (code: string, message: string, details: unknown = null) => ({
+  error: { code, message, details, requestId: `fake-${Date.now()}` },
 });
 
 const toSession = ({ id, fullName, role, phone, email, avatarUrl }: DemoAccount): AuthSession => ({
@@ -86,23 +93,75 @@ const writeSession = (userId: string | null) => {
 
 export const createFakeAuthApi = ({ delayMs = 300 }: { delayMs?: number } = {}): AuthApi => {
   const wait = () => new Promise((resolve) => setTimeout(resolve, delayMs));
+  // Tài khoản đăng ký thêm chỉ sống trong phiên chạy này.
+  const accounts: DemoAccount[] = [...DEMO_ACCOUNTS];
+  const failsByPhone = new Map<string, number>();
+  const lockedUntilByPhone = new Map<string, number>();
 
   return {
     async login({ phone, password }) {
       await wait();
-      const account = DEMO_ACCOUNTS.find((a) => a.phone === phone.trim());
+      const account = accounts.find((a) => a.phone === phone.trim());
+      // Giống BE: sai 5 lần liên tiếp thì khóa tạm, trả retryAfterSeconds.
+      const lockedUntil = lockedUntilByPhone.get(phone) ?? 0;
+      if (lockedUntil > Date.now()) {
+        throw apiError('ACCOUNT_TEMPORARILY_LOCKED', 'Temporarily locked', {
+          retryAfterSeconds: Math.ceil((lockedUntil - Date.now()) / 1000),
+        });
+      }
       if (!account || password !== DEMO_PASSWORD) {
+        const fails = (failsByPhone.get(phone) ?? 0) + 1;
+        failsByPhone.set(phone, fails);
+        if (fails >= MAX_FAILED_LOGINS) {
+          failsByPhone.delete(phone);
+          lockedUntilByPhone.set(phone, Date.now() + TEMP_LOCK_SECONDS * 1000);
+          throw apiError('ACCOUNT_TEMPORARILY_LOCKED', 'Temporarily locked', {
+            retryAfterSeconds: TEMP_LOCK_SECONDS,
+          });
+        }
         throw apiError('INVALID_CREDENTIALS', 'Invalid credentials');
       }
+      failsByPhone.delete(phone);
       if (account.locked) throw apiError('ACCOUNT_LOCKED', 'Account locked');
       writeSession(account.id);
+      return toSession(account);
+    },
+
+    async register({ fullName, phone, email }) {
+      await wait();
+      // Giữ chỗ cho luồng Q15: SĐT trùng hồ sơ tạo tại quầy thì phải kích hoạt.
+      if (phone === DESK_PROFILE_PHONE) throw apiError('ACTIVATION_REQUIRED', 'Activation required');
+      if (accounts.some((a) => a.phone === phone)) throw apiError('PHONE_DUPLICATED', 'Phone duplicated');
+      const account: DemoAccount = {
+        id: crypto.randomUUID(),
+        fullName,
+        role: 'MEMBER',
+        phone,
+        email: email ?? null,
+        avatarUrl: null,
+      };
+      accounts.push(account);
+      writeSession(account.id);
+      return toSession(account);
+    },
+
+    async changePassword({ currentPassword }) {
+      await wait();
+      const account = accounts.find((a) => a.id === readSession());
+      if (!account) throw apiError('UNAUTHENTICATED', 'Unauthenticated');
+      if (currentPassword !== DEMO_PASSWORD) {
+        throw apiError('VALIDATION_ERROR', 'Wrong current password', [
+          { field: 'currentPassword', messages: ['Mật khẩu hiện tại không đúng'] },
+        ]);
+      }
+      // Bản thử không lưu mật khẩu mới: tài khoản mẫu vẫn đăng nhập bằng DEMO_PASSWORD.
       return toSession(account);
     },
 
     async refresh() {
       await wait();
       const id = readSession();
-      const account = DEMO_ACCOUNTS.find((a) => a.id === id && !a.locked);
+      const account = accounts.find((a) => a.id === id && !a.locked);
       return account ? toSession(account) : null;
     },
 

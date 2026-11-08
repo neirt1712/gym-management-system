@@ -12,8 +12,8 @@ export const BUSINESS = {
     bcryptCost: 10,
     /** be-plan tuần 2: khóa tạm sau 5 lần sai */
     maxFailedLogins: 5,
-    /** TODO(Triển): thời gian khóa tạm chưa có tài liệu chốt */
-    tempLockMinutes: undefined as number | undefined,
+    /** OPEN_QUESTIONS Q22: khóa tạm 15 phút */
+    tempLockMinutes: 15,
     /** decisions.md #1: link đặt lại mật khẩu hạn 30 phút */
     passwordResetTokenMinutes: 30,
   },

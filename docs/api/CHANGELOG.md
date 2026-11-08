@@ -4,6 +4,50 @@
 - **Ai đọc:** Sơn, Bằng (FE), Hồng Anh (BE), Huy Trường (test).
 - Ký hiệu: **Thêm** · **Đổi** (có thể làm hỏng code đang dùng) · **Bỏ**.
 
+## 0.2.2 — 07/11/2026
+
+Bỏ mọi ghi chú "Chưa chốt" theo câu trả lời Q16, Q17, Q20 (05/11, `docs/handoff/OPEN_QUESTIONS.md`).
+Không đổi field, không đổi endpoint, không thêm mã lỗi.
+
+**Đổi (mô tả, không đổi hợp đồng)**
+- `POST /orders/{id}/payments`: bỏ ghi chú "tạm thời trả 400 cho VNPAY", BE đã có VNPay (nhánh tích hợp tuần 4).
+- `POST /auth/forgot-password`: tài khoản không có email cũng trả `202`, không có mã riêng (Q16, Q17a).
+- `GET /payments/vnpay/ipn`: link cũ báo thành công khi đơn còn PENDING thì vẫn kích hoạt; đơn không còn PENDING
+  thì chỉ lưu `gateway_payload`, trả `RspCode 02` (Q17d).
+- `POST /check-ins`: gói chưa tới `startsOn` không tính (`NO_ACTIVE_SUBSCRIPTION`); gói PT được vào phòng tập (Q17b).
+- `POST /orders/{id}/payments`: hội viên tự chọn `CASH` được (Q17e).
+- `GET /orders`: STAFF vẫn xem đơn mọi ngày (Q24a, tạm chốt của Triển, chờ Huy Trường duyệt).
+- Bảo lưu: hết số ngày thì tự mở lại; mở sớm thì cộng số ngày thực tế (Q20b).
+- Lịch PT: không chặn giờ ngoài khung rảnh ở BE (Q20c); đổi/hủy lịch chỉ trước giờ bắt đầu (Q20e);
+  xác nhận buổi thì đề xuất còn OPEN chuyển `SUPERSEDED` (Q20i).
+- Theo dõi tập: Admin chỉ xem ghi chú và kế hoạch, không ghi, không sửa (Q20h).
+- Lớp: hủy lớp thì đăng ký chuyển `CANCELLED` + thông báo (Q20a); không giảm sức chứa dưới số đã đăng ký,
+  không mở lại lớp đã hủy (Q20i).
+- Báo cáo: "hội viên mới" tính theo đơn PAID đầu tiên trong khoảng (Q20f). Thông báo chủ động chọn theo vai trò (Q20g).
+
+**FE cần làm:** màn quên mật khẩu luôn ghi "Không nhận được email thì liên hệ quầy" (Q17a).
+
+## 0.2.1 — 20/10/2026
+
+Đóng phần mã lỗi của Q16, Q21 (Hồng Anh trả lời 18/10 trong `error-codes.md`), ghi rõ quy tắc đơn và thanh toán tiền mặt
+khi làm BE tuần 3. Không đổi field, không đổi endpoint.
+
+**Thêm**
+- 3 mã lỗi: `409 ORDER_NOT_PENDING` (kèm `details.status`) ở `POST /orders/{id}/cancel`, `POST /orders/{id}/payments`,
+  `POST /payments/{id}/confirm-cash`; `409 FREEZE_LIMIT_REACHED` ở `POST /subscriptions/{id}/freeze`;
+  `409 CLASS_NOT_OPEN` ở `POST /classes/{id}/enrollments`. Mỗi mã có ví dụ cho mock Prism.
+- `403` ở hủy đơn và tạo thanh toán (PT gọi).
+
+**Đổi (mô tả, không đổi hợp đồng)**
+- Hủy đơn hộ (STAFF/ADMIN) **bắt buộc** `reason`; thiếu thì `400` ở field `reason`.
+- `confirm-cash`: payment đã bị thay bằng lần khác là `400` ở field `id`; số biên lai dạng `BL-YYYYMMDD-NNNN`.
+- `GET /orders`, `GET /payments`: `from`, `to` lọc theo ngày tạo (giờ Việt Nam). STAFF xem đơn mọi ngày (tạm chốt Q17c).
+- `GET /payments/{id}`: STAFF xem giao dịch ngày khác nhận `404`.
+- Gia hạn: `renewalOf` không phải của hội viên là `404`, gói đã hủy là `400`.
+- **Tạm thời đến 28/10:** BE thật trả `400` cho `method: VNPAY` (VNPay làm tuần 4). Mock Prism không đổi.
+
+**FE cần làm:** thêm 3 mã vào `frontend/src/lib/errors.ts` (câu hiển thị ở `error-codes.md`).
+
 ## 0.2.0 — 18/10/2026
 
 Đủ 74 API theo `docs/spec/api-v3.md` (thêm 7 nhóm, 36 API). Không đổi gì của bản 0.1, chỉ thêm.

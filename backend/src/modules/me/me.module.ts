@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
+import { MeController } from './me.controller';
+import { MeService } from './me.service';
+import { UploadsController } from './uploads.controller';
 
 /**
- * Hồ sơ (3 endpoint): GET/PATCH /me, POST /uploads/avatar.
+ * Hồ sơ (3 endpoint + tạo lại QR theo Q6): GET/PATCH /me, POST /me/qr-token/regenerate, POST /uploads/avatar.
  * UC: UC05, UC15 · Người làm: Triển. Danh sách endpoint: docs/spec/api-v3.md, chi tiết: docs/api/openapi.yaml.
- * Còn rỗng: thêm controller, service, dto/ khi làm endpoint (skill /be-endpoint).
  */
-@Module({})
+@Module({
+  controllers: [MeController, UploadsController],
+  providers: [MeService],
+})
 export class MeModule {}

@@ -8,9 +8,9 @@
 
 | Hạng mục | Trạng thái | Ở đâu |
 | --- | --- | --- |
-| Phong cách chung (màu, kiểu chữ, độ bo góc) | **Chưa chốt** — đang dùng bộ tạm trong `theme/tokens.ts` | `quyet-dinh.md` |
-| Bộ màu | **Chưa chốt** (tạm treo; nền nhạt màu chính đang bị xám, xem `fe-huong-dan-component.md` mục 2.2) | `quyet-dinh.md` |
-| Figma 15 màn demo | **Chưa có** (Q4) | `man-hinh.md` |
+| Phong cách chung (kiểu chữ, độ bo góc, animation) | **Đang rà qua `/impeccable`** trên mock; hướng đã chốt (UI-10) | `quyet-dinh.md`, `mock/` |
+| Bộ màu | **Đã chốt 10/10** (UI-09, 6 màu); `theme/tokens.ts` chưa đổi, đổi khi chạy `/fe-design-lock` | `quyet-dinh.md`, `mock/BangMau.html` |
+| Mock các màn | **Có 57 màn** dạng HTML (10/10), chỉ là bản demo: khi code lấy làm gốc và dùng `/impeccable` (UI-13) | `mock/index.html` |
 | Ảnh sơ bộ (mock) | **Chưa có** | `anh/` (tạo khi có ảnh) |
 | Hướng dẫn giao diện chi tiết | **Chưa sinh** — sinh bằng `/fe-design-lock` sau khi chốt | `huong-dan-giao-dien.md` (sẽ có) |
 
@@ -23,6 +23,8 @@ Khi còn **Chưa chốt**: chỉ dựng màn theo bố cục và quy tắc chung
 | `brief.md` | Brief vẽ Figma: hệ thống làm gì, kịch bản demo, 15 màn, nội dung từng màn, bố cục, chữ, phần không vẽ |
 | `man-hinh.md` | Bảng theo dõi 15 màn: Chưa vẽ → Đang vẽ → Chờ duyệt → Đã duyệt → Đã code, link frame Figma |
 | `quyet-dinh.md` | Nhật ký quyết định giao diện: đã chốt gì, đang chờ gì, ai chốt, ngày |
+| `mock/` | Mock HTML 57 màn + `styles.css` (biến màu, font, animation), mở `mock/index.html` bằng trình duyệt. Nơi `/impeccable` được dùng đầy đủ trước khi chốt |
+| `TIEP-TUC.md` | **Đọc đầu tiên khi mở đoạn chat mới** (Claude Code hoặc Claude web): đang ở đâu, còn gì, câu lệnh dán sẵn |
 | `anh/` | Ảnh sơ bộ và ảnh chốt (PNG, đặt tên theo `man-hinh.md`) — tạo khi có ảnh đầu tiên |
 | `huong-dan-giao-dien.md` | Hướng dẫn chi tiết (bộ màu đầy đủ, chữ, khoảng cách, component, từng màn) — **sinh tự động** bởi `/fe-design-lock`, không viết tay |
 

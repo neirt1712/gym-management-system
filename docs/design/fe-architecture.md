@@ -20,7 +20,7 @@ component ──> hook (features/<domain>/api.ts, TanStack Query)
 - Nhiều request cùng gặp 401 thì chỉ gọi refresh 1 lần; các request khác chờ kết quả.
 - Mã HTTP: 401 → refresh; 403 → trang hoặc toast "không có quyền"; 409, 422 → thông điệp theo `error.code`; 429 → thông điệp và khóa nút trong `retryAfterSeconds`.
 - `AuthProvider` dùng interface `AuthApi`, có 2 bản: `fakeAuthApi` (tài khoản mẫu, không cần backend) và `httpAuthApi` (POST `/auth/login`, `/auth/refresh`, `/auth/logout` theo openapi v0.1). Đổi bản không đổi component. `AuthProvider` nối token, refresh và báo hết phiên vào `api/client.ts` (`configureApiAuth`).
-  - Code: `src/features/auth/` (`authApi.ts` là interface, `fakeAuthApi.ts`, `httpAuthApi.ts`, `AuthProvider.tsx`, `useAuth`). Chọn bản cài đặt ở `features/auth/index.ts` theo `VITE_AUTH_MODE` (`fake` mặc định | `http`).
+  - Code: `src/features/auth/` (`authApi.ts` là interface, `fakeAuthApi.ts`, `httpAuthApi.ts`, `AuthProvider.tsx`, `useAuth`). Chọn bản cài đặt ở `features/auth/index.ts` theo `VITE_AUTH_MODE` (`fake` | `http`); không đặt thì `npm run dev` dùng `http` (backend thật), `npm run dev:mock` dùng `fake` (từ 08/11, fe-plan tuần 4 bỏ mock).
   - Đăng nhập chỉ bằng số điện thoại (Q12). Tài khoản mẫu khớp ví dụ `POST /auth/login` trong openapi (Q8), mật khẩu chung `matkhau123`: Quản trị `0900000001`, Quầy `0900000002`, PT `0900000003`, Hội viên `0901234567`, bị khóa `0900000009` (thử lỗi `ACCOUNT_LOCKED`). Bản giả dùng cùng id (UUID) với ví dụ openapi. Dữ liệu seed của BE nên dùng cùng bộ SĐT và mật khẩu này.
   - Bản giả nhớ phiên qua `sessionStorage` (chỉ id người dùng, không có token) để mô phỏng refresh cookie; bản thật không dùng storage.
 
@@ -41,6 +41,7 @@ component ──> hook (features/<domain>/api.ts, TanStack Query)
 | `/me/profile` | Mọi vai trò | Hồ sơ, đổi mật khẩu | UC05, UC06 | Sơn |
 | `/member` | Member | Tổng quan: gói, buổi còn lại, lịch sắp tới, QR | UC10, UC15 | Sơn |
 | `/member/purchase/:packageId`, `/member/orders`, `/member/orders/:id` | Member | Mua gói, đơn, kết quả thanh toán, biên lai | UC09, UC12, UC14 | Sơn |
+| `/member/subscriptions/:id` | Member | Chi tiết gói của tôi: số buổi theo tháng, bảo lưu | UC10 | Sơn |
 | `/member/appointments`, `/member/appointments/:id` | Member | Lịch PT, chi tiết và thương lượng | UC23–UC26 | Sơn |
 | `/member/classes` | Member | Lớp học, lớp của tôi | UC37 | Sơn |
 | `/member/training` | Member | Kế hoạch và tiến độ tập | UC29, UC30 | Bằng |
