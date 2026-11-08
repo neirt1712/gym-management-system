@@ -8,7 +8,8 @@ import type { AccessTokenPayload } from '../src/common/auth/jwt-auth.guard';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 /*
- * Test tích hợp các nhóm nợ tuần 1–5: tài khoản, PT + khung giờ, lịch PT, check-in, thông báo, ảnh đại diện.
+ * Test tích hợp các nhóm nợ tuần 1–5: tài khoản, lịch PT, thông báo, ảnh đại diện.
+ * Check-in và PT có e2e riêng của Hồng Anh (check-ins.e2e-spec.ts, trainers.e2e-spec.ts).
  * DB riêng `gym_test` (cách chuẩn bị: xem đầu test/packages.e2e-spec.ts); test xóa sạch dữ liệu trước mỗi ca.
  */
 const TEST_DATABASE_URL =
@@ -52,7 +53,6 @@ describe('Việc nợ tuần 1–5 (e2e)', () => {
   const admin = () => bearer(ID.admin, 'ADMIN');
   const staff = () => bearer(ID.staff, 'STAFF');
   const trainer = () => bearer(ID.trainerUser, 'TRAINER');
-  const otherTrainer = () => bearer(ID.otherTrainerUser, 'TRAINER');
   const an = () => bearer(ID.anUser, 'MEMBER');
   const binh = () => bearer(ID.binhUser, 'MEMBER');
   const http = () => request(app.getHttpServer());
@@ -216,47 +216,6 @@ describe('Việc nợ tuần 1–5 (e2e)', () => {
     });
   });
 
-  describe('UC21, UC22 PT và khung giờ', () => {
-    it('danh sách công khai chỉ có PT ACTIVE, không có SĐT', async () => {
-      await prisma.trainer.update({ where: { id: ID.otherTrainer }, data: { status: 'INACTIVE' } });
-      const res = await http().get('/api/v1/trainers').expect(200);
-      expect(res.body.data.map((t: { id: string }) => t.id)).toEqual([ID.trainer]);
-      expect(res.body.data[0]).not.toHaveProperty('phone');
-    });
-
-    it('PT thay khung giờ của mình; khoảng chồng nhau thì VALIDATION_ERROR; PT khác 404', async () => {
-      const from = at18(1).slice(0, 10);
-      const to = at18(7).slice(0, 10);
-      const slots = [{ startsAt: at18(1), endsAt: at18(1).replace('T18:', 'T21:') }];
-      const res = await http()
-        .put(`/api/v1/trainers/${ID.trainer}/availability`)
-        .set('Authorization', trainer())
-        .send({ from, to, slots })
-        .expect(200);
-      expect(res.body.slots).toHaveLength(1);
-
-      const overlap = await http()
-        .put(`/api/v1/trainers/${ID.trainer}/availability`)
-        .set('Authorization', trainer())
-        .send({
-          from,
-          to,
-          slots: [
-            ...slots,
-            { startsAt: at18(1).replace('T18:', 'T19:'), endsAt: at18(1).replace('T18:', 'T20:') },
-          ],
-        })
-        .expect(400);
-      expect(overlap.body.error.details[0].field).toBe('slots[1].startsAt');
-
-      await http()
-        .put(`/api/v1/trainers/${ID.trainer}/availability`)
-        .set('Authorization', otherTrainer())
-        .send({ from, to, slots })
-        .expect(404);
-    });
-  });
-
   describe('UC23–UC27 lịch PT', () => {
     it('tạo lịch PENDING chờ PT, PT có thông báo; PT đồng ý thì CONFIRMED, version tăng', async () => {
       const created = await book().expect(201);
@@ -352,72 +311,6 @@ describe('Việc nợ tuần 1–5 (e2e)', () => {
     it('hội viên khác không xem được lịch (404)', async () => {
       const created = await book().expect(201);
       await http().get(`/api/v1/appointments/${created.body.id}`).set('Authorization', binh()).expect(404);
-    });
-  });
-
-  describe('UC16–UC18 check-in', () => {
-    it('check-in bằng SĐT, gói còn ≤ 7 ngày thì expiringSoon; lần hai ALREADY_CHECKED_IN', async () => {
-      const res = await http()
-        .post('/api/v1/check-ins')
-        .set('Authorization', staff())
-        .send({ phone: '0900000006' })
-        .expect(201);
-      expect(res.body).toMatchObject({ method: 'PHONE', expiringSoon: true, checkedOutAt: null });
-      const again = await http()
-        .post('/api/v1/check-ins')
-        .set('Authorization', staff())
-        .send({ qrToken: 'qr-binh' })
-        .expect(409);
-      expect(again.body.error).toMatchObject({
-        code: 'ALREADY_CHECKED_IN',
-        details: { checkInId: res.body.id },
-      });
-    });
-
-    it('QR sai thì INVALID_QR; không có gói thì NO_ACTIVE_SUBSCRIPTION; gói PT vào được', async () => {
-      const bad = await http()
-        .post('/api/v1/check-ins')
-        .set('Authorization', staff())
-        .send({ qrToken: 'sai' })
-        .expect(422);
-      expect(bad.body.error.code).toBe('INVALID_QR');
-      const pt = await http()
-        .post('/api/v1/check-ins')
-        .set('Authorization', staff())
-        .send({ qrToken: 'qr-an' })
-        .expect(201);
-      expect(pt.body.subscription.id).toBe(ID.ptSub);
-      await prisma.subscription.update({ where: { id: ID.gymSub }, data: { startsOn: dateOnly(3) } });
-      const future = await http()
-        .post('/api/v1/check-ins')
-        .set('Authorization', staff())
-        .send({ phone: '0900000006' })
-        .expect(422);
-      expect(future.body.error.code).toBe('NO_ACTIVE_SUBSCRIPTION');
-    });
-
-    it('check-out lặp vẫn 200; hội viên tự check-out là SELF; danh sách present', async () => {
-      const res = await http()
-        .post('/api/v1/check-ins')
-        .set('Authorization', staff())
-        .send({ phone: '0900000006' })
-        .expect(201);
-      const present = await http()
-        .get('/api/v1/check-ins')
-        .query({ present: 'true' })
-        .set('Authorization', staff())
-        .expect(200);
-      expect(present.body.meta.total).toBe(1);
-      const out = await http()
-        .post(`/api/v1/check-ins/${res.body.id}/checkout`)
-        .set('Authorization', binh())
-        .expect(200);
-      expect(out.body.checkoutType).toBe('SELF');
-      await http()
-        .post(`/api/v1/check-ins/${res.body.id}/checkout`)
-        .set('Authorization', staff())
-        .expect(200);
-      await http().post(`/api/v1/check-ins/${res.body.id}/checkout`).set('Authorization', an()).expect(404);
     });
   });
 

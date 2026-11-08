@@ -3,14 +3,14 @@ import { CurrentUser, Public, Roles } from '../../common/auth/decorators';
 import type { AuthUser } from '../../common/http/request-context';
 import {
   AvailabilityQueryDto,
+  ListTrainerMembersQueryDto,
   ListTrainersQueryDto,
   ReplaceAvailabilityDto,
-  TrainerMembersQueryDto,
   UpdateTrainerDto,
 } from './dto/trainer.dto';
 import { TrainersService } from './trainers.service';
 
-/** PT: UC21 (xem), UC22 (khung giờ rảnh), UC28 (hội viên phụ trách), UC33 (Admin sửa hồ sơ). */
+/** PT: UC21 (xem), UC22, UC23 (khung giờ rảnh), UC28 (hội viên phụ trách), UC33 (sửa hồ sơ). */
 @Controller('trainers')
 export class TrainersController {
   constructor(private readonly trainers: TrainersService) {}
@@ -35,8 +35,8 @@ export class TrainersController {
 
   @Public()
   @Get(':id/availability')
-  availability(@Param('id') id: string, @Query() query: AvailabilityQueryDto) {
-    return this.trainers.availability(id, query);
+  getAvailability(@Param('id') id: string, @Query() query: AvailabilityQueryDto) {
+    return this.trainers.getAvailability(id, query);
   }
 
   @Roles('TRAINER', 'ADMIN')
@@ -51,7 +51,11 @@ export class TrainersController {
 
   @Roles('TRAINER', 'ADMIN')
   @Get(':id/members')
-  members(@Param('id') id: string, @Query() query: TrainerMembersQueryDto, @CurrentUser() user: AuthUser) {
-    return this.trainers.members(id, query, user);
+  listMembers(
+    @Param('id') id: string,
+    @Query() query: ListTrainerMembersQueryDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.trainers.listMembers(id, query, user);
   }
 }

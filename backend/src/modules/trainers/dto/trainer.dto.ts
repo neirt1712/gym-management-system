@@ -1,11 +1,10 @@
-import { TrainerStatus } from '@prisma/client';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
-  IsEnum,
-  IsISO8601,
+  IsIn,
   IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   Length,
@@ -13,17 +12,39 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { PageQueryDto } from '../../../common/pagination.dto';
+import { BUSINESS } from '../../../config/business.config';
 import { DATE_ONLY_PATTERN } from '../../members/dto/create-member.dto';
 
-const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+const TRAINER_STATUSES = ['ACTIVE', 'INACTIVE'] as const;
+type TrainerStatusValue = (typeof TRAINER_STATUSES)[number];
 
-/** Query của GET /trainers. */
+/** Không gửi thì bỏ qua, gửi `null` thì vẫn kiểm (và báo lỗi). */
+const NotNullIfSent = () => ValidateIf((_object, value) => value !== undefined);
+
+/** openapi DateTime: ISO 8601 có múi giờ (+07:00 hoặc Z). */
+const DATE_TIME_WITH_OFFSET = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+
+class PageQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(BUSINESS.pagination.maxPageSize)
+  pageSize: number = BUSINESS.pagination.defaultPageSize;
+}
+
+/** Query của GET /trainers (openapi: listTrainers). */
 export class ListTrainersQueryDto extends PageQueryDto {
   @IsOptional()
-  @Transform(trim)
   @IsString()
   @MaxLength(100)
   q?: string;
@@ -33,20 +54,21 @@ export class ListTrainersQueryDto extends PageQueryDto {
   @MaxLength(50)
   specialty?: string;
 
-  /** Chỉ Admin dùng được. */
+  /** Chỉ Admin dùng được; vai trò khác bị bỏ qua (chỉ thấy ACTIVE). */
   @IsOptional()
-  @IsEnum(TrainerStatus)
-  status?: TrainerStatus;
+  @IsIn(TRAINER_STATUSES)
+  status?: TrainerStatusValue;
 }
 
 /** Body của PATCH /trainers/{id} (openapi: UpdateTrainerRequest). */
 export class UpdateTrainerDto {
-  @IsOptional()
+  /** Lưu ở users.full_name. */
+  @NotNullIfSent()
   @IsString()
   @Length(1, 100)
   fullName?: string;
 
-  @IsOptional()
+  @NotNullIfSent()
   @IsArray()
   @ArrayMaxSize(10)
   @IsString({ each: true })
@@ -64,9 +86,9 @@ export class UpdateTrainerDto {
   @Max(60)
   experienceYears?: number | null;
 
-  @IsOptional()
-  @IsEnum(TrainerStatus)
-  status?: TrainerStatus;
+  @NotNullIfSent()
+  @IsIn(TRAINER_STATUSES)
+  status?: TrainerStatusValue;
 }
 
 /** Query của GET /trainers/{id}/availability. */
@@ -82,11 +104,12 @@ export class AvailabilityQueryDto {
   to?: string;
 }
 
-/** openapi TimeRange. */
 export class TimeRangeDto {
+  @Matches(DATE_TIME_WITH_OFFSET, { message: 'startsAt phải là ISO 8601 có múi giờ' })
   @IsISO8601({ strict: true })
   startsAt: string;
 
+  @Matches(DATE_TIME_WITH_OFFSET, { message: 'endsAt phải là ISO 8601 có múi giờ' })
   @IsISO8601({ strict: true })
   endsAt: string;
 }
@@ -108,10 +131,10 @@ export class ReplaceAvailabilityDto {
   slots: TimeRangeDto[];
 }
 
-/** Query của GET /trainers/{id}/members. */
-export class TrainerMembersQueryDto extends PageQueryDto {
+/** Query của GET /trainers/{id}/members (openapi: listTrainerMembers). */
+export class ListTrainerMembersQueryDto extends PageQueryDto {
+  /** Tên (không dấu), SĐT hoặc mã hội viên. */
   @IsOptional()
-  @Transform(trim)
   @IsString()
   @MaxLength(100)
   q?: string;
