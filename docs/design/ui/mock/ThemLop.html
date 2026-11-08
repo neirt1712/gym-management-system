@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tạo, sửa lớp (hộp thoại)</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="shell" style="position: relative">
+<aside class="side">
+<a href="DashboardAdmin.html" class="brand"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<span class="side-label">QUẢN TRỊ</span>
+<nav aria-label="Menu quản trị"><a href="DashboardAdmin.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Tổng quan</a><a href="DoanhThu.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="3"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 9.5v.01M18 14.5v.01"></path></svg>Doanh thu</a><a href="QuanTriGoi.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4z"></path><path d="M3 7v10l9 4 9-4V7M12 11v10"></path></svg>Gói tập</a><a href="HoiVien.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-2.5-5"></path></svg>Hội viên</a><a href="TaiKhoan.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"></circle><path d="M11 12l9-9M17 6l2.5 2.5M14.5 8.5l2 2"></path></svg>Tài khoản</a><a href="QuanTriLop.html" aria-current="page"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Lớp học</a><a href="GuiThongBao.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v3l12 5V6L3 11z"></path><path d="M15 9a3 3 0 0 1 0 6M7 15l1.5 5h3L10 16"></path></svg>Thông báo</a></nav>
+<div class="side-foot">Thao tác nhạy cảm đều được ghi nhật ký.</div>
+</aside>
+<div class="main">
+<header class="topbar">
+<label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm kiếm</span><input type="search" placeholder="Tìm nhanh"></label>
+<div class="top-actions">
+<a href="ThongBao.html" class="icon-btn" aria-label="Thông báo, có tin mới"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span class="dot"></span></a>
+<a href="HoSo.html" class="user-chip"><span class="avatar">D</span><span><b>Phạm Thị Dung</b><small>Quản trị</small></span></a>
+</div>
+</header>
+<main class="content enter">
+<div class="page-head"><div><h1 class="h1">Lớp học</h1></div><div class="row"></div></div><div class="card" style="height: 420px; opacity: .6"></div>
+</main>
+</div>
+<div class="scrim">
+<form class="modal" role="dialog" aria-modal="true" aria-labelledby="tl-title" style="max-width: 640px">
+<div class="modal-head"><h1 id="tl-title" class="h2">Tạo lớp</h1><a href="QuanTriLop.html" class="icon-btn" aria-label="Đóng"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a></div>
+<div class="modal-body">
+<label class="field">Tên lớp<input class="input" value="HIIT 45 phút"></label>
+<label class="field">Mô tả<textarea class="textarea">Bài tập cường độ cao ngắt quãng, phù hợp người đã tập cơ bản.</textarea></label>
+<div class="grid g2" style="gap: 14px"><label class="field">Ngày<input class="input" type="date" value="2026-10-15"></label><label class="field">Giờ<span class="row" style="flex-wrap: nowrap; gap: 8px"><input class="input" type="time" value="18:00"><span>–</span><input class="input" type="time" value="18:45"></span></label></div>
+<div class="grid g2" style="gap: 14px"><label class="field">Huấn luyện viên<select class="select"><option>Ngô Thảo My</option><option>Đặng Quốc Huy</option></select></label><label class="field">Sức chứa<input class="input" type="number" value="20"></label></div>
+<label class="field">Hạn hủy đăng ký (phút trước giờ học)<input class="input" type="number" value="120"><span class="hint">Mặc định 120 phút.</span></label>
+<div role="alert" class="alert alert-bad"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg><span><b>Khung giờ này bị trùng lịch</b> của PT Ngô Thảo My (buổi PT 18:00). Chọn giờ khác. (Mẫu lỗi SCHEDULE_CONFLICT)</span></div>
+</div>
+<div class="modal-foot"><a href="QuanTriLop.html" class="btn btn-danger" style="margin-right: auto">Hủy lớp</a><a href="QuanTriLop.html" class="btn btn-soft">Đóng</a><a href="QuanTriLop.html" class="btn btn-primary">Lưu lớp</a></div>
+</form></div>
+</div>
+</x-dc>
+</body>
+</html>

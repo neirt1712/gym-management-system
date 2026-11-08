@@ -1,9 +1,10 @@
-import { Layout, Menu, Typography, theme } from 'antd';
+import { Layout, Menu, Space, Typography, theme } from 'antd';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth';
 import { space } from '../../theme/tokens';
 import { activeNavPath, NAV_BY_ROLE } from '../navigation';
 import { ROLE_HOME } from '../roles';
+import { NotificationBell } from './NotificationBell';
 import { UserMenu } from './UserMenu';
 
 /** Khung chung sau đăng nhập: menu trái theo vai trò, thanh trên có menu tài khoản. */
@@ -39,7 +40,10 @@ export const AppLayout = () => {
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
           }}
         >
-          <UserMenu />
+          <Space size={space.sm}>
+            <NotificationBell />
+            <UserMenu />
+          </Space>
         </Layout.Header>
         <Layout.Content style={{ padding: space.lg }}>
           <Outlet />

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Quản trị giao dịch</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="shell" style="position: relative">
+<aside class="side">
+<a href="DashboardAdmin.html" class="brand"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<span class="side-label">QUẢN TRỊ</span>
+<nav aria-label="Menu quản trị"><a href="DashboardAdmin.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Tổng quan</a><a href="DoanhThu.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="3"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 9.5v.01M18 14.5v.01"></path></svg>Doanh thu</a><a href="GiaoDich.html" aria-current="page"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h6"></path></svg>Giao dịch</a><a href="QuanTriGoi.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4z"></path><path d="M3 7v10l9 4 9-4V7M12 11v10"></path></svg>Gói tập</a><a href="HoiVien.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-2.5-5"></path></svg>Hội viên</a><a href="QuanTriPT.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg>Huấn luyện viên</a><a href="TaiKhoan.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"></circle><path d="M11 12l9-9M17 6l2.5 2.5M14.5 8.5l2 2"></path></svg>Tài khoản</a><a href="QuanTriLop.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Lớp học</a><a href="GuiThongBao.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v3l12 5V6L3 11z"></path><path d="M15 9a3 3 0 0 1 0 6M7 15l1.5 5h3L10 16"></path></svg>Thông báo</a></nav>
+<div class="side-foot">Thao tác nhạy cảm đều được ghi nhật ký.</div>
+</aside>
+<div class="main">
+<header class="topbar">
+<label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm kiếm</span><input type="search" placeholder="Tìm nhanh"></label>
+<div class="top-actions">
+<a href="ThongBao.html" class="icon-btn" aria-label="Thông báo, có tin mới"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span class="dot"></span></a>
+<a href="HoSo.html" class="user-chip"><span class="avatar">D</span><span><b>Phạm Thị Dung</b><small>Quản trị</small></span></a>
+</div>
+</header>
+<main class="content enter">
+<div class="page-head"><div><h1 class="h1">Giao dịch</h1><p>Mọi lần thanh toán VNPay và tiền mặt. Dùng để đối soát.</p></div><div class="row"><button type="button" class="btn btn-soft"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"></path></svg> Xuất Excel</button></div></div>
+<div class="grid g4">
+<div class="card sun tight kpi"><span class="k-label">Thành công hôm nay</span><span class="k-val">[SỐ]</span><span class="k-sub">[SỐ] ₫</span></div>
+<div class="card peach tight kpi"><span class="k-label">Tiền mặt chờ thu</span><span class="k-val">[SỐ]</span><span class="k-sub">Hết hạn cuối ngày</span></div>
+<div class="card tight kpi"><span class="k-label">Thất bại hôm nay</span><span class="k-val">[SỐ]</span><span class="k-sub">VNPay từ chối hoặc hủy</span></div>
+<div class="card dark tight kpi"><span class="k-label" style="color: var(--on-dark-2)">VNPay / Tiền mặt</span><span class="k-val sun-text">[SỐ] / [SỐ]</span><span class="k-sub" style="color: var(--on-dark-2)">Số giao dịch thành công</span></div>
+</div>
+<div class="card tight" style="flex-direction: row; flex-wrap: wrap; align-items: flex-end; gap: 14px">
+<label class="field" style="flex: 1 1 160px">Từ ngày<input class="input" type="date" value="2026-10-12"></label>
+<label class="field" style="flex: 1 1 160px">Đến ngày<input class="input" type="date" value="2026-10-12"></label>
+<label class="field" style="flex: 1 1 160px">Phương thức<select class="select"><option>Tất cả</option><option>VNPay</option><option>Tiền mặt</option></select></label>
+<label class="field" style="flex: 1 1 160px">Trạng thái<select class="select"><option>Tất cả</option><option>Thành công</option><option>Đang chờ</option><option>Thất bại</option></select></label>
+<label class="field" style="flex: 2 1 220px">Tìm<input class="input" type="search" placeholder="Mã đơn, mã tham chiếu, SĐT"></label>
+</div>
+<div class="table-wrap"><table class="tbl" style="min-width: 980px">
+<thead><tr><th scope="col">Mã tham chiếu</th><th scope="col">Hội viên</th><th scope="col">Phương thức</th><th scope="col" class="r">Số tiền</th><th scope="col">Trạng thái</th><th scope="col">Thời điểm</th><th scope="col">Người xác nhận</th><th scope="col"><span class="sr">Xem</span></th></tr></thead>
+<tbody>
+<tr><td class="num"><b>PAY-000231</b><div class="small muted">DH000123</div></td><td>Trần Văn Bảo</td><td>VNPay</td><td class="r num">4.200.000 ₫</td><td><span class="tag tag-ok">Thành công</span></td><td>12/10 14:32</td><td>—</td><td class="r"><a href="ChiTietDon.html" class="btn btn-soft btn-sm">Chi tiết</a></td></tr>
+<tr><td class="num"><b>PAY-000232</b><div class="small muted">DH000121</div></td><td>Võ Thị Lan</td><td>Tiền mặt</td><td class="r num">1.350.000 ₫</td><td><span class="tag tag-ok">Thành công</span></td><td>12/10 10:05</td><td>Lê Văn Cường</td><td class="r"><a href="ChiTietDon.html" class="btn btn-soft btn-sm">Chi tiết</a></td></tr>
+<tr><td class="num"><b>PAY-000233</b><div class="small muted">DH000118</div></td><td>Trần Văn Bảo</td><td>Tiền mặt</td><td class="r num">500.000 ₫</td><td><span class="tag tag-warn">Đang chờ</span></td><td>12/10 09:40</td><td>—</td><td class="r"><a href="ChiTietDon.html" class="btn btn-soft btn-sm">Chi tiết</a></td></tr>
+<tr><td class="num"><b>PAY-000229</b><div class="small muted">DH000122</div></td><td>Đỗ Quang Huy</td><td>VNPay</td><td class="r num">2.400.000 ₫</td><td><span class="tag tag-bad">Thất bại</span></td><td>12/10 08:12</td><td>—</td><td class="r"><a href="ChiTietDon.html" class="btn btn-soft btn-sm">Chi tiết</a></td></tr>
+</tbody></table></div>
+<p class="small muted" style="margin: 0">Dữ liệu mẫu. GET /payments (lọc ngày, phương thức, trạng thái). Quầy chỉ xem giao dịch trong ngày.</p>
+</main>
+</div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -15,6 +15,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   TOKEN_EXPIRED: 'Liên kết đã hết hạn. Gửi lại yêu cầu đặt mật khẩu.',
   INVALID_FILE: 'Chỉ nhận ảnh JPEG hoặc PNG.',
   PENDING_ORDER_EXISTS: 'Bạn đang có đơn chờ thanh toán cho gói này. Mở lại đơn đó để thanh toán.',
+  ORDER_NOT_PENDING: 'Đơn này không còn chờ thanh toán. Tải lại để xem trạng thái mới.',
   CASH_AMOUNT_MISMATCH: 'Số tiền nhận phải bằng số tiền cần thanh toán.',
   NO_ACTIVE_SUBSCRIPTION: 'Hội viên chưa có gói còn hiệu lực. Mua hoặc gia hạn gói để check-in.',
   SUBSCRIPTION_EXPIRED: 'Gói đã hết hạn. Gia hạn để check-in.',
@@ -25,6 +26,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   SUBSCRIPTION_NOT_FROZEN: 'Gói này không ở trạng thái bảo lưu.',
   FREEZE_BLOCKED_BY_APPOINTMENTS:
     'Gói còn lịch tập sắp tới. Hủy hoặc hoàn tất các lịch đó trước khi bảo lưu.',
+  FREEZE_LIMIT_REACHED: 'Gói này đã bảo lưu một lần, không bảo lưu thêm được.',
   SCHEDULE_CONFLICT: 'Khung giờ này bị trùng lịch. Chọn giờ khác.',
   STALE_VERSION: 'Lịch vừa được bên kia cập nhật. Xem lại đề xuất mới nhất.',
   NO_SESSIONS_AVAILABLE: 'Gói đã hết buổi có thể đặt.',
@@ -32,6 +34,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   SESSION_NOT_ENDED: 'Buổi tập chưa kết thúc nên chưa xác nhận được.',
   NO_CLASS_BENEFIT: 'Gói của bạn không gồm quyền tham gia lớp học.',
   CLASS_FULL: 'Lớp đã đủ chỗ.',
+  CLASS_NOT_OPEN: 'Lớp đã hủy hoặc đã bắt đầu, không đăng ký được nữa.',
   CANCELLATION_WINDOW_PASSED: 'Đã quá hạn hủy đăng ký lớp này.',
   ROLE_CHANGE_NOT_ALLOWED: 'Không đổi được vai trò cho tài khoản này.',
   RATE_LIMITED: 'Bạn thao tác quá nhanh. Thử lại sau ít phút.',
@@ -40,7 +43,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
 
 const FALLBACK = 'Có lỗi xảy ra. Thử lại sau.';
 
-type ApiError = { error?: { code?: string; message?: string; requestId?: string } };
+type FieldDetail = { field?: string; messages?: string[] };
+
+type ApiError = { error?: { code?: string; message?: string; details?: unknown; requestId?: string } };
 
 export const getErrorCode = (err: unknown): string | undefined => (err as ApiError)?.error?.code;
 
@@ -50,4 +55,27 @@ export const getRequestId = (err: unknown): string | undefined => (err as ApiErr
 export const getErrorMessage = (err: unknown): string => {
   const code = getErrorCode(err);
   return (code && ERROR_MESSAGES[code]) || FALLBACK;
+};
+
+/** `error.details` của lỗi (ví dụ `{ retryAfterSeconds }`, `{ status }`). Không có thì trả undefined. */
+export const getErrorDetails = <T = Record<string, unknown>>(err: unknown): T | undefined => {
+  const details = (err as ApiError)?.error?.details;
+  return details && typeof details === 'object' && !Array.isArray(details) ? (details as T) : undefined;
+};
+
+/**
+ * `VALIDATION_ERROR` kèm `details: [{ field, messages }]` → dạng `form.setFields` của Ant Design.
+ * Chỉ lấy các ô có trong form (`fields`); ô lạ thì bỏ, thông điệp chung vẫn hiện ở Alert đầu form.
+ */
+export const getFieldErrors = <F extends string>(
+  err: unknown,
+  fields: readonly F[],
+): { name: F; errors: string[] }[] => {
+  if (getErrorCode(err) !== 'VALIDATION_ERROR') return [];
+  const details = (err as ApiError)?.error?.details;
+  if (!Array.isArray(details)) return [];
+  const isField = (f: string | undefined): f is F => !!f && (fields as readonly string[]).includes(f);
+  return (details as FieldDetail[]).flatMap((d) =>
+    isField(d.field) && Array.isArray(d.messages) ? [{ name: d.field, errors: d.messages }] : [],
+  );
 };

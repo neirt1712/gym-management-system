@@ -1,14 +1,40 @@
 import { Alert, Button, Card, Form, Input, Typography } from 'antd';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ROLE_HOME } from '../../app/roles';
 import { safeNext } from '../../app/safeNext';
 import { isFakeAuth, useAuth, type LoginInput } from '../../features/auth';
-import { DEMO_PASSWORD } from '../../features/auth/fakeAuthApi';
-import { getErrorMessage, getRequestId } from '../../lib/errors';
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../features/auth/fakeAuthApi';
+import { PHONE_RULES } from '../../features/auth/rules';
+import { getErrorCode, getErrorDetails, getErrorMessage, getRequestId } from '../../lib/errors';
 import { space } from '../../theme/tokens';
 
-/** UC02 Đăng nhập. */
+const ROLE_SHORT = { ADMIN: 'Quản trị', STAFF: 'Quầy', TRAINER: 'PT', MEMBER: 'Hội viên' } as const;
+
+/** Tài khoản mẫu hiện trong chế độ thử (bỏ tài khoản bị khóa). */
+const DEMO_HINT = DEMO_ACCOUNTS.filter((a) => !a.locked)
+  .map((a) => `${ROLE_SHORT[a.role]} ${a.phone}`)
+  .join(' · ');
+
+/** Đếm ngược số giây còn khóa tạm (`details.retryAfterSeconds` của ACCOUNT_TEMPORARILY_LOCKED). */
+const useLockCountdown = (error: unknown) => {
+  const [left, setLeft] = useState(0);
+  useEffect(() => {
+    if (getErrorCode(error) !== 'ACCOUNT_TEMPORARILY_LOCKED') return setLeft(0);
+    const seconds = getErrorDetails<{ retryAfterSeconds?: number }>(error)?.retryAfterSeconds ?? 0;
+    const until = Date.now() + seconds * 1000;
+    const tick = () => setLeft(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [error]);
+  return left;
+};
+
+const mmss = (seconds: number) =>
+  `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+
+/** UC02 Đăng nhập (chỉ bằng số điện thoại, Q12). Sai 5 lần thì khóa tạm, nút bị khóa tới khi hết giờ chờ. */
 export const LoginPage = () => {
   const { status, user, login } = useAuth();
   const navigate = useNavigate();
@@ -16,6 +42,7 @@ export const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const next = safeNext(params.get('next'));
+  const lockLeft = useLockCountdown(error);
 
   if (status === 'authenticated' && user) return <Navigate to={next ?? ROLE_HOME[user.role]} replace />;
 
@@ -47,7 +74,11 @@ export const LoginPage = () => {
             style={{ marginBottom: space.md }}
             message={getErrorMessage(error)}
             description={
-              requestId ? (
+              lockLeft > 0 ? (
+                <span>
+                  Thử lại sau <b>{mmss(lockLeft)}</b>.
+                </span>
+              ) : requestId ? (
                 <Typography.Text type="secondary">Mã yêu cầu: {requestId}</Typography.Text>
               ) : undefined
             }
@@ -55,18 +86,14 @@ export const LoginPage = () => {
         )}
 
         <Form<LoginInput> name="login" layout="vertical" requiredMark={false} onFinish={onFinish}>
-          <Form.Item
-            label="Số điện thoại hoặc email"
-            name="identifier"
-            rules={[{ required: true, whitespace: true, message: 'Nhập số điện thoại hoặc email.' }]}
-          >
-            <Input autoComplete="username" autoFocus />
+          <Form.Item label="Số điện thoại" name="phone" rules={PHONE_RULES}>
+            <Input autoComplete="username" inputMode="tel" autoFocus />
           </Form.Item>
           <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: 'Nhập mật khẩu.' }]}>
             <Input.Password autoComplete="current-password" />
           </Form.Item>
-          <Button type="primary" htmlType="submit" block loading={submitting}>
-            Đăng nhập
+          <Button type="primary" htmlType="submit" block loading={submitting} disabled={lockLeft > 0}>
+            {lockLeft > 0 ? 'Đang khóa tạm' : 'Đăng nhập'}
           </Button>
         </Form>
 
@@ -80,7 +107,7 @@ export const LoginPage = () => {
             type="info"
             style={{ marginTop: space.md }}
             message="Chế độ thử, chưa nối backend"
-            description={`Hội viên 0900000001 · PT 0900000002 · Quầy 0900000003 · Quản trị 0900000004 · Mật khẩu ${DEMO_PASSWORD}`}
+            description={`${DEMO_HINT} · Mật khẩu ${DEMO_PASSWORD}`}
           />
         )}
       </Card>

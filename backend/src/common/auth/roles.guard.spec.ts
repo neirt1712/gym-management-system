@@ -33,6 +33,6 @@ describe('RolesGuard', () => {
   it('sai vai trò thì FORBIDDEN', () => {
     const run = () => guardRequiring(['ADMIN']).canActivate(contextFor(member));
     expect(run).toThrow(AppError);
-    expect(run).toThrow('FORBIDDEN');
+    expect(run).toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
   });
 });
