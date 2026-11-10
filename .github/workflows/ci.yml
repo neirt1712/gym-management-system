@@ -17,6 +17,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # Script `prepare` gọi husky; trong CI không cần hook git (lấy từ honganhw5-ci của Hồng Anh).
+  HUSKY: '0'
+
 jobs:
   backend:
     name: Backend
