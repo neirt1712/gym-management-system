@@ -21,6 +21,7 @@ export const toUserResponse = (user: User & { trainer: Trainer | null }) => ({
   role: user.role,
   status: user.status,
   shift: user.shift,
-  trainer: user.trainer ? toTrainerProfile(user.trainer) : null,
+  // openapi: "Hồ sơ PT, chỉ TRAINER có" — hồ sơ INACTIVE do đổi vai trò không trả ra
+  trainer: user.role === 'TRAINER' && user.trainer ? toTrainerProfile(user.trainer) : null,
   createdAt: toVnDateTime(user.createdAt),
 });

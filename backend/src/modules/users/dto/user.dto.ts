@@ -137,8 +137,9 @@ export class UpdateUserStatusDto {
 
 /** Body của PATCH /users/{id}/role. */
 export class UpdateUserRoleDto {
-  @IsIn(['ADMIN', 'STAFF', 'TRAINER'])
-  role: 'ADMIN' | 'STAFF' | 'TRAINER';
+  /** MEMBER lọt qua kiểm tra để service trả 422 ROLE_CHANGE_NOT_ALLOWED đúng mô tả openapi. */
+  @IsIn(['ADMIN', 'STAFF', 'TRAINER', 'MEMBER'])
+  role: 'ADMIN' | 'STAFF' | 'TRAINER' | 'MEMBER';
 
   @IsString()
   @Length(1, 500)

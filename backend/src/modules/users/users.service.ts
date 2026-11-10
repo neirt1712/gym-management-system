@@ -119,14 +119,17 @@ export class UsersService {
     }
   }
 
-  /** UC34. Khóa thì tăng token_version để đăng xuất mọi thiết bị. Không tự khóa mình. */
+  /** UC34. Chỉ khi khóa mới tăng token_version để đăng xuất mọi thiết bị (openapi). Không tự khóa mình. */
   async updateStatus(id: string, dto: UpdateUserStatusDto, actor: AuthUser) {
     if (id === actor.id) throw new AppError('FORBIDDEN', null, 'Không tự khóa tài khoản của mình');
     const before = await this.load(id);
     const user = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
         where: { id },
-        data: { status: dto.status, tokenVersion: { increment: 1 } },
+        data: {
+          status: dto.status,
+          ...(dto.status === 'LOCKED' ? { tokenVersion: { increment: 1 } } : {}),
+        },
         include: { trainer: true },
       });
       await this.audit.log(tx, {
@@ -145,12 +148,13 @@ export class UsersService {
 
   /**
    * UC35. Chỉ đổi giữa ADMIN, STAFF, TRAINER. PT còn lịch hoặc lớp tương lai thì không đổi được.
-   * Sang TRAINER thì tạo hồ sơ PT trống. Người bị đổi bị đăng xuất mọi thiết bị.
+   * Q24(a) bản Hồng Anh: PT sang vai trò khác thì hồ sơ PT chuyển INACTIVE (giữ cho lịch sử);
+   * sang TRAINER thì bật lại hồ sơ cũ, chưa có thì tạo trống. Người bị đổi bị đăng xuất mọi thiết bị.
    */
   async updateRole(id: string, dto: UpdateUserRoleDto, actor: AuthUser) {
     const before = await this.load(id);
-    if (before.role === 'MEMBER')
-      throw new AppError('ROLE_CHANGE_NOT_ALLOWED', null, 'Không đổi vai trò hội viên');
+    if (before.role === 'MEMBER' || dto.role === 'MEMBER')
+      throw new AppError('ROLE_CHANGE_NOT_ALLOWED', null, 'Không đổi vai trò từ hoặc sang hội viên');
     if (before.role === dto.role) return toUserResponse(before);
 
     if (before.role === 'TRAINER' && before.trainer) {
@@ -177,7 +181,15 @@ export class UsersService {
     }
 
     const user = await this.prisma.$transaction(async (tx) => {
-      if (dto.role === 'TRAINER' && !before.trainer) await tx.trainer.create({ data: { userId: id } });
+      if (dto.role === 'TRAINER') {
+        if (before.trainer) {
+          await tx.trainer.update({ where: { id: before.trainer.id }, data: { status: 'ACTIVE' } });
+        } else {
+          await tx.trainer.create({ data: { userId: id } });
+        }
+      } else if (before.trainer) {
+        await tx.trainer.update({ where: { id: before.trainer.id }, data: { status: 'INACTIVE' } });
+      }
       const updated = await tx.user.update({
         where: { id },
         data: { role: dto.role, tokenVersion: { increment: 1 } },
