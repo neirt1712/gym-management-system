@@ -4,9 +4,9 @@
 - **Ai đọc:** cả nhóm và Claude, ở đầu mỗi phiên (`/team-start`).
 - Giữ ngắn: tối đa 3 gạch đầu dòng mỗi cột. Lịch sử xem git log, không chép vào đây.
 
-Cập nhật lần cuối: 10/11/2026 (mục bên dưới bảng, dòng Triển); 08/11 (dòng Hồng Anh); 25/10 (dòng Sơn)
+Cập nhật lần cuối: 23/11/2026 (mục bên dưới bảng, dòng Triển); 08/11 (dòng Hồng Anh); 25/10 (dòng Sơn)
 
-**Ghi chú 10/11 (Triển, ngày 1 kế hoạch 2 tuần hoàn thành web):** nhánh `tsonw4-tich-hop` (PR #26) chạy e2e trên Postgres 16 local: **177/177 test xanh** (10 bộ), lint, typecheck, 42 unit test, build đạt; CI GitHub xanh. Đã thêm 24 test users của Hồng Anh và sửa users cho khớp openapi (commit `c9524f3`). Nhánh `trienw6-gop-ci-status` gộp sẵn #28 (CI) và #33 (tài liệu), mở PR sau khi #26 vào `develop`. #30, #32 trùng nội dung #26, đóng được; #29 đã lấy test, đóng được; #34 trỏ nhầm `main`, đóng.
+**Ghi chú 23/11 (Triển, việc 0 tuần 8):** chạy lại 23/11 vẫn xanh. Nhánh `tsonw4-tich-hop` (PR #26) chạy e2e trên Postgres 16 local: **177/177 test xanh** (10 bộ), lint, typecheck, 42 unit test, build đạt; CI GitHub xanh. Đã thêm 24 test users của Hồng Anh và sửa users cho khớp openapi (commit `c9524f3`). Nhánh `trienw8-gop-ci-status` gộp sẵn #28 (CI) và #33 (tài liệu), mở PR sau khi #26 vào `develop`. #30, #32 trùng nội dung #26, đóng được; #29 đã lấy test, đóng được; #34 trỏ nhầm `main`, đóng.
 
 | Người | Đã xong (tuần này) | Đang làm | Đang vướng / chờ ai |
 | --- | --- | --- | --- |
