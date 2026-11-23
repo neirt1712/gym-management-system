@@ -50,5 +50,7 @@ export const BUSINESS = {
     autoCheckoutCron: '59 23 * * *',
     trainerConfirmReminderHours: 24,
     expirePendingOrdersCron: '*/5 * * * *',
+    /** Q20b (tự mở lại gói hết kỳ bảo lưu). Quyết định 17 chưa có mốc; Triển chọn 00:05 ngày 23/11 */
+    autoUnfreezeCron: '5 0 * * *',
   },
 } as const;
