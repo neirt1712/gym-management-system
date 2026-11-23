@@ -1,8 +1,10 @@
 import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { isUUID } from 'class-validator';
+import { PrismaService } from '../../prisma/prisma.service';
 import { AppError } from '../errors/app-error';
-import type { RequestWithContext } from '../http/request-context';
+import type { AuthUser, RequestWithContext } from '../http/request-context';
 import { IS_PUBLIC_KEY } from './decorators';
 import { ROLES, type Role } from './role';
 
@@ -15,12 +17,15 @@ const isPayload = (p: Partial<AccessTokenPayload>): p is AccessTokenPayload =>
 /**
  * Chặn mọi endpoint chưa đăng nhập, trừ endpoint có @Public().
  * Đọc header Authorization: Bearer <access token>, kiểm chữ ký và hạn, gắn req.user.
+ * Endpoint @Public() có token hợp lệ vẫn gắn req.user (ví dụ GET /packages: Admin thấy cả gói ngừng bán);
+ * token thiếu hoặc sai thì coi như khách, không báo lỗi.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly jwt: JwtService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -28,9 +33,17 @@ export class JwtAuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) return true;
-
     const req = context.switchToHttp().getRequest<RequestWithContext>();
+
+    try {
+      req.user = await this.readUser(req);
+    } catch (e) {
+      if (!isPublic) throw e;
+    }
+    return true;
+  }
+
+  private async readUser(req: RequestWithContext): Promise<AuthUser> {
     const [scheme, token] = (req.headers.authorization ?? '').split(' ');
     if (scheme !== 'Bearer' || !token) throw new AppError('UNAUTHENTICATED');
 
@@ -40,11 +53,17 @@ export class JwtAuthGuard implements CanActivate {
     } catch {
       throw new AppError('UNAUTHENTICATED');
     }
-    if (!isPayload(payload)) throw new AppError('UNAUTHENTICATED');
+    // sub không phải UUID thì Prisma báo lỗi kiểu dữ liệu (500), nên chặn trước bằng 401
+    if (!isPayload(payload) || !isUUID(payload.sub)) throw new AppError('UNAUTHENTICATED');
 
-    // TODO(tuần 2, khi có Prisma): so payload.tv với users.token_version; khác thì UNAUTHENTICATED.
-    // Đây là cách thu hồi mọi phiên khi khóa tài khoản hoặc đổi mật khẩu (ADR 0001).
-    req.user = { id: payload.sub, role: payload.role, tokenVersion: payload.tv };
-    return true;
+    // So với users.token_version: cách thu hồi mọi phiên khi khóa tài khoản hoặc đổi mật khẩu (ADR 0001).
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { tokenVersion: true, status: true },
+    });
+    if (!user || user.status !== 'ACTIVE' || user.tokenVersion !== payload.tv) {
+      throw new AppError('UNAUTHENTICATED');
+    }
+    return { id: payload.sub, role: payload.role, tokenVersion: payload.tv };
   }
 }

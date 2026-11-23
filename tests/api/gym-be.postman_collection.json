@@ -1,0 +1,402 @@
+{
+  "info": {
+    "name": "Gym BE — Xác thực, hồ sơ, đơn hàng, thanh toán, gói hội viên",
+    "description": "Request mẫu cho Huy Trường test API thật (Triển, 08/11/2026). Hợp đồng: docs/api/openapi.yaml 0.2.2.\nChạy theo thứ tự từ trên xuống (Run collection). Cần backend chạy local và đã `npm run seed`.\nĐiền biến `seedPassword` (giá trị SEED_DEFAULT_PASSWORD trong backend/.env) và `vnpHashSecret` (VNPAY_HASH_SECRET) ở tab Variables của collection; không commit giá trị thật.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+    { "key": "seedPassword", "value": "" },
+    { "key": "vnpHashSecret", "value": "" },
+    { "key": "memberPhone", "value": "0910000001" },
+    { "key": "staffPhone", "value": "0900000011" },
+    { "key": "memberToken", "value": "" },
+    { "key": "staffToken", "value": "" },
+    { "key": "packageId", "value": "" },
+    { "key": "packagePrice", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "paymentId", "value": "" },
+    { "key": "vnpOrderId", "value": "" },
+    { "key": "merchantRef", "value": "" },
+    { "key": "vnpAmount", "value": "" },
+    { "key": "newPhone", "value": "" },
+    { "key": "newToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Vận hành",
+      "item": [
+        {
+          "name": "GET /health — server và DB sống",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, status ok', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('ok'); });",
+            "pm.test('có header x-request-id', () => pm.expect(pm.response.headers.get('x-request-id')).to.be.a('string'));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        }
+      ]
+    },
+    {
+      "name": "1. Xác thực (UC01, UC02, UC03, UC06)",
+      "item": [
+        {
+          "name": "POST /auth/login — hội viên (lưu memberToken)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, có accessToken 15 phút', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().expiresIn).to.eql(900); });",
+            "pm.test('đặt cookie refresh_token HttpOnly', () => pm.expect(pm.response.headers.get('set-cookie') || '').to.include('HttpOnly'));",
+            "pm.test('không trả passwordHash', () => pm.expect(pm.response.json().user).to.not.have.property('passwordHash'));",
+            "pm.collectionVariables.set('memberToken', pm.response.json().accessToken);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"phone\": \"{{memberPhone}}\", \"password\": \"{{seedPassword}}\" }" },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "POST /auth/login — Staff (lưu staffToken)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, vai trò STAFF', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().user.role).to.eql('STAFF'); });",
+            "pm.collectionVariables.set('staffToken', pm.response.json().accessToken);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"phone\": \"{{staffPhone}}\", \"password\": \"{{seedPassword}}\" }" },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "POST /auth/login — sai mật khẩu → 401 INVALID_CREDENTIALS",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('401 INVALID_CREDENTIALS, có requestId', () => { pm.response.to.have.status(401); const e = pm.response.json().error; pm.expect(e.code).to.eql('INVALID_CREDENTIALS'); pm.expect(e.requestId).to.be.a('string'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"phone\": \"0910000030\", \"password\": \"sai-mat-khau\" }" },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "POST /auth/register — khách mới (SĐT ngẫu nhiên)",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "pm.collectionVariables.set('newPhone', '098' + String(Math.floor(Math.random() * 1e7)).padStart(7, '0'));"
+            ] } },
+            { "listen": "test", "script": { "exec": [
+              "pm.test('201, MEMBER, đăng nhập luôn', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().user.role).to.eql('MEMBER'); });",
+              "pm.collectionVariables.set('newToken', pm.response.json().accessToken);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"fullName\": \"Khách Postman\", \"phone\": \"{{newPhone}}\", \"password\": \"matkhau123\" }" },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "POST /auth/register — SĐT đã có → 409 PHONE_DUPLICATED",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('409 PHONE_DUPLICATED', () => { pm.response.to.have.status(409); pm.expect(pm.response.json().error.code).to.eql('PHONE_DUPLICATED'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"fullName\": \"Trùng\", \"phone\": \"{{newPhone}}\", \"password\": \"matkhau123\" }" },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "POST /auth/change-password — sai mật khẩu hiện tại → 400 field currentPassword",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('400 VALIDATION_ERROR ở currentPassword (không phải 401)', () => { pm.response.to.have.status(400); const e = pm.response.json().error; pm.expect(e.code).to.eql('VALIDATION_ERROR'); pm.expect(e.details[0].field).to.eql('currentPassword'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{newToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"currentPassword\": \"sai\", \"newPassword\": \"matkhaumoi456\" }" },
+            "url": "{{baseUrl}}/auth/change-password"
+          }
+        },
+        {
+          "name": "POST /auth/change-password — đúng → phiên mới, token cũ bị thu hồi",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, trả phiên mới', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().accessToken).to.be.a('string'); });",
+            "const oldToken = pm.collectionVariables.get('newToken');",
+            "pm.collectionVariables.set('newToken', pm.response.json().accessToken);",
+            "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/me', header: { Authorization: 'Bearer ' + oldToken } }, (err, res) => {",
+            "  pm.test('token cũ gọi /me nhận 401', () => pm.expect(res.code).to.eql(401));",
+            "});"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{newToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"currentPassword\": \"matkhau123\", \"newPassword\": \"matkhaumoi456\" }" },
+            "url": "{{baseUrl}}/auth/change-password"
+          }
+        },
+        {
+          "name": "POST /auth/refresh — dùng cookie refresh_token (Postman tự gửi)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, phiên mới', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().accessToken).to.be.a('string'); });"
+          ] } }],
+          "request": { "method": "POST", "url": "{{baseUrl}}/auth/refresh" }
+        }
+      ]
+    },
+    {
+      "name": "2. Hồ sơ (UC05, UC15)",
+      "item": [
+        {
+          "name": "GET /me — hội viên có mã QR",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, có member.qrToken', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().member.qrToken).to.be.a('string'); });"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/me" }
+        },
+        {
+          "name": "GET /me — không token → 401 UNAUTHENTICATED",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('401 UNAUTHENTICATED', () => { pm.response.to.have.status(401); pm.expect(pm.response.json().error.code).to.eql('UNAUTHENTICATED'); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me" }
+        }
+      ]
+    },
+    {
+      "name": "3. Mua gói tiền mặt (UC07, UC09, UC13, UC14)",
+      "item": [
+        {
+          "name": "GET /packages — lấy gói GYM đang bán",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, dạng {data, meta}', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.have.keys('data', 'meta'); });",
+            "const gym = pm.response.json().data.find((p) => p.type === 'GYM' && p.status === 'ACTIVE');",
+            "pm.test('có gói GYM đang bán', () => pm.expect(gym).to.be.an('object'));",
+            "pm.collectionVariables.set('packageId', gym.id);",
+            "pm.collectionVariables.set('packagePrice', gym.price);"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/packages?type=GYM" }
+        },
+        {
+          "name": "POST /orders/quote — báo giá, BE tính endsOn",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, total = giá gói, có startsOn và endsOn', () => { pm.response.to.have.status(200); const b = pm.response.json(); pm.expect(b.total).to.eql(Number(pm.collectionVariables.get('packagePrice'))); pm.expect(b.endsOn).to.match(/^\\d{4}-\\d{2}-\\d{2}$/); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{memberToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"packageId\": \"{{packageId}}\" }" },
+            "url": "{{baseUrl}}/orders/quote"
+          }
+        },
+        {
+          "name": "POST /orders — tạo đơn (chạy lại thì 409 PENDING_ORDER_EXISTS, vẫn lấy orderId)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const b = pm.response.json();",
+            "pm.test('201 đơn PENDING hoặc 409 PENDING_ORDER_EXISTS kèm orderId', () => {",
+            "  pm.expect([201, 409]).to.include(pm.response.code);",
+            "  if (pm.response.code === 201) pm.expect(b.status).to.eql('PENDING');",
+            "  else pm.expect(b.error.code).to.eql('PENDING_ORDER_EXISTS');",
+            "});",
+            "pm.collectionVariables.set('orderId', pm.response.code === 201 ? b.id : b.error.details.orderId);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{memberToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"packageId\": \"{{packageId}}\" }" },
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "POST /orders/{id}/payments — CASH (hội viên chọn trả tại quầy, Q17e)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('201 payment PENDING, amount = total', () => { pm.response.to.have.status(201); const b = pm.response.json(); pm.expect(b.status).to.eql('PENDING'); pm.expect(b.method).to.eql('CASH'); });",
+            "pm.collectionVariables.set('paymentId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{memberToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"method\": \"CASH\" }" },
+            "url": "{{baseUrl}}/orders/{{orderId}}/payments"
+          }
+        },
+        {
+          "name": "POST /payments/{id}/confirm-cash — hội viên tự xác nhận → 403",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('403 FORBIDDEN', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().error.code).to.eql('FORBIDDEN'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{memberToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"receivedAmount\": {{packagePrice}} }" },
+            "url": "{{baseUrl}}/payments/{{paymentId}}/confirm-cash"
+          }
+        },
+        {
+          "name": "POST /payments/{id}/confirm-cash — sai số tiền → 422 CASH_AMOUNT_MISMATCH",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('422 kèm expectedAmount', () => { pm.response.to.have.status(422); const e = pm.response.json().error; pm.expect(e.code).to.eql('CASH_AMOUNT_MISMATCH'); pm.expect(e.details.expectedAmount).to.eql(Number(pm.collectionVariables.get('packagePrice'))); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"receivedAmount\": 1 }" },
+            "url": "{{baseUrl}}/payments/{{paymentId}}/confirm-cash"
+          }
+        },
+        {
+          "name": "POST /payments/{id}/confirm-cash — Staff nhận đủ tiền",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 payment SUCCESS', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('SUCCESS'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"receivedAmount\": {{packagePrice}} }" },
+            "url": "{{baseUrl}}/payments/{{paymentId}}/confirm-cash"
+          }
+        },
+        {
+          "name": "POST /payments/{id}/confirm-cash — bấm lại → vẫn 200, không sinh gói thứ hai",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 SUCCESS như lần trước', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('SUCCESS'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"receivedAmount\": {{packagePrice}} }" },
+            "url": "{{baseUrl}}/payments/{{paymentId}}/confirm-cash"
+          }
+        },
+        {
+          "name": "GET /orders/{id} — đơn PAID, có biên lai BL-YYYYMMDD-NNNN",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const b = pm.response.json();",
+            "pm.test('200 PAID', () => { pm.response.to.have.status(200); pm.expect(b.status).to.eql('PAID'); });",
+            "pm.test('có biên lai và gói hội viên', () => { pm.expect(b.receiptNo).to.match(/^BL-\\d{8}-\\d{4}$/); pm.expect(b.subscriptionId).to.be.a('string'); });"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/orders/{{orderId}}" }
+        },
+        {
+          "name": "GET /orders/{id} — hội viên khác xem → 404 (không lộ có tồn tại)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('404 NOT_FOUND', () => { pm.response.to.have.status(404); pm.expect(pm.response.json().error.code).to.eql('NOT_FOUND'); });"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{newToken}}" }], "url": "{{baseUrl}}/orders/{{orderId}}" }
+        },
+        {
+          "name": "GET /payments — Staff chỉ thấy giao dịch hôm nay (quyết định 19)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, dạng {data, meta}', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().meta.total).to.be.a('number'); });"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }], "url": "{{baseUrl}}/payments?from=2020-01-01&to=2030-12-31" }
+        }
+      ]
+    },
+    {
+      "name": "4. Gói hội viên (UC10)",
+      "item": [
+        {
+          "name": "GET /subscriptions — gói ACTIVE của tôi",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, có ít nhất 1 gói ACTIVE', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data.some((s) => s.status === 'ACTIVE')).to.be.true; });"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/subscriptions?status=ACTIVE" }
+        }
+      ]
+    },
+    {
+      "name": "5. VNPay với IPN tự ký (UC12)",
+      "description": "VNPay không gọi được về máy local, nên IPN được giả lập: pre-request ký tham số bằng HMAC SHA512 với `vnpHashSecret` (phải trùng VNPAY_HASH_SECRET của backend). Dùng tài khoản mới đăng ký ở mục 1 để không vướng đơn chờ của hội viên seed.",
+      "item": [
+        {
+          "name": "POST /orders — đơn mới cho khách vừa đăng ký",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('vnpOrderId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{newToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"packageId\": \"{{packageId}}\" }" },
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "POST /orders/{id}/payments — VNPAY trả checkoutUrl",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const b = pm.response.json();",
+            "pm.test('201, có checkoutUrl và merchantRef', () => { pm.response.to.have.status(201); pm.expect(b.checkoutUrl).to.include('vnp_SecureHash='); pm.expect(b.merchantRef).to.be.a('string'); });",
+            "pm.collectionVariables.set('merchantRef', b.merchantRef);",
+            "pm.collectionVariables.set('vnpAmount', String(b.amount * 100));"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{newToken}}" }],
+            "body": { "mode": "raw", "raw": "{ \"method\": \"VNPAY\" }" },
+            "url": "{{baseUrl}}/orders/{{vnpOrderId}}/payments"
+          }
+        },
+        {
+          "name": "GET /payments/vnpay/ipn — sai chữ ký → RspCode 97",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200, RspCode 97', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().RspCode).to.eql('97'); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/payments/vnpay/ipn?vnp_TxnRef={{merchantRef}}&vnp_Amount={{vnpAmount}}&vnp_ResponseCode=00&vnp_TransactionStatus=00&vnp_TransactionNo=PM{{merchantRef}}&vnp_SecureHash=sai" }
+        },
+        {
+          "name": "GET /payments/vnpay/ipn — thành công → RspCode 00, gói kích hoạt",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "const params = { vnp_Amount: pm.collectionVariables.get('vnpAmount'), vnp_ResponseCode: '00', vnp_TransactionNo: 'PM' + pm.collectionVariables.get('merchantRef'), vnp_TransactionStatus: '00', vnp_TxnRef: pm.collectionVariables.get('merchantRef') };",
+              "const query = Object.keys(params).sort().map((k) => k + '=' + encodeURIComponent(params[k]).replace(/%20/g, '+')).join('&');",
+              "const hash = CryptoJS.HmacSHA512(query, pm.collectionVariables.get('vnpHashSecret')).toString(CryptoJS.enc.Hex);",
+              "pm.variables.set('ipnQuery', query + '&vnp_SecureHash=' + hash);"
+            ] } },
+            { "listen": "test", "script": { "exec": [
+              "pm.test('200, RspCode 00', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().RspCode).to.eql('00'); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/payments/vnpay/ipn?{{ipnQuery}}" }
+        },
+        {
+          "name": "GET /payments/vnpay/ipn — gọi lặp → RspCode 02, không tạo gói lần hai",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "const params = { vnp_Amount: pm.collectionVariables.get('vnpAmount'), vnp_ResponseCode: '00', vnp_TransactionNo: 'PM' + pm.collectionVariables.get('merchantRef'), vnp_TransactionStatus: '00', vnp_TxnRef: pm.collectionVariables.get('merchantRef') };",
+              "const query = Object.keys(params).sort().map((k) => k + '=' + encodeURIComponent(params[k]).replace(/%20/g, '+')).join('&');",
+              "const hash = CryptoJS.HmacSHA512(query, pm.collectionVariables.get('vnpHashSecret')).toString(CryptoJS.enc.Hex);",
+              "pm.variables.set('ipnQuery', query + '&vnp_SecureHash=' + hash);"
+            ] } },
+            { "listen": "test", "script": { "exec": [
+              "pm.test('200, RspCode 02', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().RspCode).to.eql('02'); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/payments/vnpay/ipn?{{ipnQuery}}" }
+        },
+        {
+          "name": "GET /orders/{id} — FE đọc lại: đơn PAID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 PAID, có biên lai', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('PAID'); pm.expect(pm.response.json().receiptNo).to.be.a('string'); });"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{newToken}}" }], "url": "{{baseUrl}}/orders/{{vnpOrderId}}" }
+        }
+      ]
+    },
+    {
+      "name": "6. Đăng xuất (UC03)",
+      "item": [
+        {
+          "name": "POST /auth/logout — xóa cookie, 204",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('204', () => pm.response.to.have.status(204));"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/auth/logout" }
+        }
+      ]
+    }
+  ]
+}

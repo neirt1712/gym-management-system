@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Quên mật khẩu</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="app" style="display: flex; flex-wrap: wrap">
+<section class="dark-zone" style="flex: 1 1 440px; background: var(--night); color: var(--on-dark); padding: 44px; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; min-height: 380px; position: relative; overflow: hidden">
+<div class="blob" style="width: 440px; height: 440px; background: var(--sun-2); right: -160px; bottom: -120px; opacity: .45"></div>
+<div class="blob" style="width: 260px; height: 260px; background: var(--sun-4); left: -80px; top: 30%; opacity: .3; animation-delay: -4s"></div>
+<a href="Main.html" class="brand" style="color: var(--on-dark); position: relative"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<div class="enter" style="display: flex; flex-direction: column; gap: 20px; position: relative">
+<p class="display" style="margin: 0; font-size: clamp(56px, 7vw, 100px)">Lấy lại<br><span class="sun-text">mật khẩu</span></p>
+<p style="margin: 0; max-width: 440px; font-size: 16px; line-height: 1.6; color: var(--on-dark-2)">Có email: tự đặt lại bằng link. Không có email: ra quầy, nhân viên đặt lại sau khi đối chiếu số điện thoại.</p>
+</div>
+<div class="float" style="position: relative"><img src="" data-anh="cho-cap-nhat" alt="Ảnh phòng tập (ảnh mẫu)" class="pic" style="height: 190px"></div>
+</section>
+<main style="flex: 1 1 500px; padding: 64px 48px; display: flex; align-items: center; justify-content: center">
+<div class="enter" style="width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 20px">
+<form class="card" style="padding: 36px; gap: 18px">
+<a href="DangNhap.html" class="link small" style="display: inline-flex; gap: 6px; align-items: center; text-decoration: none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg> Về đăng nhập</a>
+<h1 class="h1" style="font-size: 44px">Quên mật khẩu</h1>
+<p class="muted" style="margin: 0; line-height: 1.6">Nhập số điện thoại đã đăng ký. Nếu tài khoản có email, chúng tôi gửi link đặt lại mật khẩu, hiệu lực 30 phút.</p>
+<label class="field">Số điện thoại<input class="input" type="tel" value="0900000005"></label>
+<a href="#da-gui" class="btn btn-primary btn-block" style="min-height: 54px">Gửi link đặt lại</a>
+</form>
+<div id="da-gui" class="card glow" style="gap: 12px">
+<span class="tag tag-ok" style="align-self: flex-start">Sau khi bấm gửi</span>
+<b style="font-size: 17px">Nếu số điện thoại có email, link đã được gửi.</b>
+<p style="margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-2)">Kiểm tra hộp thư (cả mục Spam). <b>Không nhận được email</b> hoặc tài khoản không có email: ra quầy, nhân viên đối chiếu số điện thoại rồi đặt lại mật khẩu giúp bạn.</p>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+</body>
+</html>

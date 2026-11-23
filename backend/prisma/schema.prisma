@@ -1,0 +1,538 @@
+// schema.prisma — đủ 18 bảng theo docs/spec/erd-v3.md (+ Q16: orders.created_at, payments.created_at).
+// Chủ file: Hồng Anh. Người khác muốn đổi: viết đề xuất, Hồng Anh tạo migration.
+// Quy ước: model PascalCase số ít + @@map snake_case; field camelCase + @map snake_case.
+// Ràng buộc Prisma không biểu diễn được nằm ở prisma/sql/rules.sql (dán vào cuối migration init).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enum (giá trị trùng ERD) ----------
+
+enum Role {
+  ADMIN
+  STAFF
+  TRAINER
+  MEMBER
+}
+
+enum UserStatus {
+  ACTIVE
+  LOCKED
+}
+
+enum TrainerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PackageType {
+  GYM
+  PT
+}
+
+enum DurationUnit {
+  DAY
+  MONTH
+}
+
+enum PackageStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  VNPAY
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  FROZEN
+  EXPIRED
+  CANCELLED
+}
+
+enum CheckInMethod {
+  QR
+  PHONE
+}
+
+enum CheckoutType {
+  SELF
+  STAFF
+  AUTO
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+// Bên đang được hỏi trong thương lượng lịch PT
+enum AwaitingRole {
+  MEMBER
+  TRAINER
+}
+
+enum ProposalKind {
+  INITIAL
+  COUNTER
+  RESCHEDULE
+  CANCEL
+}
+
+enum ProposalStatus {
+  OPEN
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+}
+
+enum ClassStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+enum EnrollmentStatus {
+  REGISTERED
+  CANCELLED
+}
+
+// ---------- 1. users ----------
+
+model User {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Q15: email không bắt buộc. Unique trên cột cho phép nhiều NULL trong PostgreSQL.
+  email        String?    @unique
+  phone        String     @unique
+  // null khi hồ sơ tạo tại quầy chưa kích hoạt
+  passwordHash String?    @map("password_hash")
+  fullName     String     @map("full_name")
+  dob          DateTime?  @db.Date
+  avatarUrl    String?    @map("avatar_url")
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  // chỉ dùng cho STAFF
+  shift        String?
+  tokenVersion Int        @default(0) @map("token_version")
+  failedLogins Int        @default(0) @map("failed_logins")
+  lockedUntil  DateTime?  @map("locked_until") @db.Timestamptz(6)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  member                Member?
+  trainer               Trainer?
+  passwordResetTokens   PasswordResetToken[]
+  ordersCreated         Order[]               @relation("OrderCreatedBy")
+  paymentsConfirmed     Payment[]             @relation("PaymentConfirmedBy")
+  checkInsConfirmed     CheckIn[]             @relation("CheckInBy")
+  appointmentsCompleted Appointment[]         @relation("AppointmentCompletedBy")
+  proposals             AppointmentProposal[]
+  notifications         Notification[]
+  auditLogs             AuditLog[]
+
+  @@map("users")
+}
+
+// ---------- 2. members ----------
+
+model Member {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String @unique @map("user_id") @db.Uuid
+  // dạng HV000001
+  memberCode String @unique @map("member_code")
+  qrToken    String @unique @map("qr_token")
+
+  user          User              @relation(fields: [userId], references: [id])
+  orders        Order[]
+  subscriptions Subscription[]
+  checkIns      CheckIn[]
+  appointments  Appointment[]
+  enrollments   ClassEnrollment[]
+  trainingPlans TrainingPlan[]
+  trainingNotes TrainingNote[]
+
+  @@map("members")
+}
+
+// ---------- 3. trainers ----------
+
+model Trainer {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String        @unique @map("user_id") @db.Uuid
+  specialties     String[]      @default([])
+  bio             String?
+  experienceYears Int?          @map("experience_years")
+  status          TrainerStatus @default(ACTIVE)
+
+  user           User                  @relation(fields: [userId], references: [id])
+  availabilities TrainerAvailability[]
+  appointments   Appointment[]
+  classes        Class[]
+  trainingPlans  TrainingPlan[]
+  trainingNotes  TrainingNote[]
+
+  @@map("trainers")
+}
+
+// ---------- 4. trainer_availabilities ----------
+
+model TrainerAvailability {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainerId String   @map("trainer_id") @db.Uuid
+  startsAt  DateTime @map("starts_at") @db.Timestamptz(6)
+  endsAt    DateTime @map("ends_at") @db.Timestamptz(6)
+
+  trainer Trainer @relation(fields: [trainerId], references: [id])
+
+  @@index([trainerId, startsAt])
+  @@map("trainer_availabilities")
+}
+
+// ---------- 5. password_reset_tokens ----------
+
+model PasswordResetToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ---------- 6. packages ----------
+
+model Package {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  description    String?
+  type           PackageType
+  // VND, số nguyên
+  price          Int
+  durationValue  Int           @map("duration_value")
+  durationUnit   DurationUnit  @map("duration_unit")
+  // null với gói GYM
+  totalSessions  Int?          @map("total_sessions")
+  sessionMinutes Int?          @map("session_minutes")
+  includesClass  Boolean       @default(false) @map("includes_class")
+  benefits       String[]      @default([])
+  status         PackageStatus @default(ACTIVE)
+
+  orders        Order[]
+  subscriptions Subscription[]
+
+  @@map("packages")
+}
+
+// ---------- 7. orders ----------
+
+model Order {
+  id                     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId               String       @map("member_id") @db.Uuid
+  packageId              String       @map("package_id") @db.Uuid
+  // gói (subscription) được gia hạn, null nếu mua mới
+  renewalOf              String?      @map("renewal_of") @db.Uuid
+  // Ảnh chụp gói tại lúc mua: sửa gói sau này không đổi đơn cũ
+  priceSnapshot          Int          @map("price_snapshot")
+  durationValueSnapshot  Int          @map("duration_value_snapshot")
+  durationUnitSnapshot   DurationUnit @map("duration_unit_snapshot")
+  totalSessionsSnapshot  Int?         @map("total_sessions_snapshot")
+  sessionMinutesSnapshot Int?         @map("session_minutes_snapshot")
+  includesClassSnapshot  Boolean      @map("includes_class_snapshot")
+  startsOn               DateTime     @map("starts_on") @db.Date
+  total                  Int
+  status                 OrderStatus  @default(PENDING)
+  expiresAt              DateTime     @map("expires_at") @db.Timestamptz(6)
+  receiptNo              String?      @unique @map("receipt_no")
+  paidAt                 DateTime?    @map("paid_at") @db.Timestamptz(6)
+  createdBy              String       @map("created_by") @db.Uuid
+  // Q16: ERD v3 chưa có, cần để sắp xếp đơn mới nhất trước
+  createdAt              DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  member        Member        @relation(fields: [memberId], references: [id])
+  package       Package       @relation(fields: [packageId], references: [id])
+  renewalSource Subscription? @relation("RenewalOf", fields: [renewalOf], references: [id])
+  creator       User          @relation("OrderCreatedBy", fields: [createdBy], references: [id])
+  payments      Payment[]
+  subscription  Subscription? @relation("SubscriptionFromOrder")
+
+  @@index([memberId, status])
+  @@index([status, expiresAt])
+  @@map("orders")
+}
+
+// ---------- 8. payments ----------
+
+model Payment {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId        String        @map("order_id") @db.Uuid
+  method         PaymentMethod
+  amount         Int
+  status         PaymentStatus @default(PENDING)
+  merchantRef    String        @unique @map("merchant_ref")
+  // unique khi khác null (PostgreSQL cho nhiều NULL)
+  gatewayTxnId   String?       @unique @map("gateway_txn_id")
+  gatewayPayload Json?         @map("gateway_payload") @db.JsonB
+  confirmedBy    String?       @map("confirmed_by") @db.Uuid
+  paidAt         DateTime?     @map("paid_at") @db.Timestamptz(6)
+  // Q16: ERD v3 chưa có
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order     Order @relation(fields: [orderId], references: [id])
+  confirmer User? @relation("PaymentConfirmedBy", fields: [confirmedBy], references: [id])
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+// ---------- 9. subscriptions ----------
+
+model Subscription {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId       String             @map("member_id") @db.Uuid
+  packageId      String             @map("package_id") @db.Uuid
+  // 1–1 với orders
+  orderId        String             @unique @map("order_id") @db.Uuid
+  packageName    String             @map("package_name")
+  totalSessions  Int?               @map("total_sessions")
+  sessionMinutes Int?               @map("session_minutes")
+  includesClass  Boolean            @map("includes_class")
+  startsOn       DateTime           @map("starts_on") @db.Date
+  // tính cả ngày đó
+  endsOn         DateTime           @map("ends_on") @db.Date
+  status         SubscriptionStatus @default(ACTIVE)
+  frozenFrom     DateTime?          @map("frozen_from") @db.Date
+  frozenDays     Int?               @map("frozen_days")
+  freezeReason   String?            @map("freeze_reason")
+
+  member        Member        @relation(fields: [memberId], references: [id])
+  package       Package       @relation(fields: [packageId], references: [id])
+  order         Order         @relation("SubscriptionFromOrder", fields: [orderId], references: [id])
+  renewalOrders Order[]       @relation("RenewalOf")
+  checkIns      CheckIn[]
+  appointments  Appointment[]
+
+  @@index([memberId, status])
+  @@map("subscriptions")
+}
+
+// ---------- 10. check_ins ----------
+
+model CheckIn {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId       String        @map("member_id") @db.Uuid
+  subscriptionId String        @map("subscription_id") @db.Uuid
+  method         CheckInMethod
+  checkedInAt    DateTime      @default(now()) @map("checked_in_at") @db.Timestamptz(6)
+  checkedOutAt   DateTime?     @map("checked_out_at") @db.Timestamptz(6)
+  checkoutType   CheckoutType? @map("checkout_type")
+  // Staff xác nhận lượt vào
+  checkedInBy    String        @map("checked_in_by") @db.Uuid
+
+  member       Member       @relation(fields: [memberId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  staff        User         @relation("CheckInBy", fields: [checkedInBy], references: [id])
+
+  @@index([memberId, checkedInAt])
+  @@map("check_ins")
+}
+
+// ---------- 11. appointments ----------
+
+model Appointment {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subscriptionId String            @map("subscription_id") @db.Uuid
+  memberId       String            @map("member_id") @db.Uuid
+  trainerId      String            @map("trainer_id") @db.Uuid
+  status         AppointmentStatus @default(PENDING)
+  // null khi không còn chờ ai (CONFIRMED trở đi)
+  awaitingRole   AwaitingRole?     @map("awaiting_role")
+  // tăng 1 mỗi lần đổi; client gửi expectedVersion để chống ghi đè
+  version        Int               @default(0)
+  startsAt       DateTime          @map("starts_at") @db.Timestamptz(6)
+  endsAt         DateTime          @map("ends_at") @db.Timestamptz(6)
+  completedBy    String?           @map("completed_by") @db.Uuid
+  completedAt    DateTime?         @map("completed_at") @db.Timestamptz(6)
+  note           String?
+
+  subscription Subscription          @relation(fields: [subscriptionId], references: [id])
+  member       Member                @relation(fields: [memberId], references: [id])
+  trainer      Trainer               @relation(fields: [trainerId], references: [id])
+  completer    User?                 @relation("AppointmentCompletedBy", fields: [completedBy], references: [id])
+  proposals    AppointmentProposal[]
+
+  @@index([trainerId, startsAt])
+  @@index([memberId, startsAt])
+  @@index([subscriptionId, status])
+  @@map("appointments")
+}
+
+// ---------- 12. appointment_proposals ----------
+
+model AppointmentProposal {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appointmentId String         @map("appointment_id") @db.Uuid
+  kind          ProposalKind
+  proposedBy    String         @map("proposed_by") @db.Uuid
+  // vai trò người đề xuất lúc đề xuất (Staff có thể đề xuất hộ hội viên)
+  proposedRole  Role           @map("proposed_role")
+  // null với CANCEL
+  startsAt      DateTime?      @map("starts_at") @db.Timestamptz(6)
+  endsAt        DateTime?      @map("ends_at") @db.Timestamptz(6)
+  note          String?
+  status        ProposalStatus @default(OPEN)
+  rejectReason  String?        @map("reject_reason")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  proposer    User        @relation(fields: [proposedBy], references: [id])
+
+  @@index([appointmentId, createdAt])
+  @@map("appointment_proposals")
+}
+
+// ---------- 13. training_plans ----------
+
+model TrainingPlan {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId        String   @map("member_id") @db.Uuid
+  trainerId       String   @map("trainer_id") @db.Uuid
+  title           String
+  // [{ name, sets, reps, weightKg, note }]
+  exercises       Json     @default("[]") @db.JsonB
+  progressPercent Int      @default(0) @map("progress_percent")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  member  Member         @relation(fields: [memberId], references: [id])
+  trainer Trainer        @relation(fields: [trainerId], references: [id])
+  notes   TrainingNote[]
+
+  @@index([memberId])
+  @@map("training_plans")
+}
+
+// ---------- 14. training_notes ----------
+
+model TrainingNote {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId        String   @map("member_id") @db.Uuid
+  trainerId       String   @map("trainer_id") @db.Uuid
+  planId          String?  @map("plan_id") @db.Uuid
+  content         String
+  progressPercent Int?     @map("progress_percent")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  member  Member        @relation(fields: [memberId], references: [id])
+  trainer Trainer       @relation(fields: [trainerId], references: [id])
+  plan    TrainingPlan? @relation(fields: [planId], references: [id])
+
+  @@index([memberId, createdAt])
+  @@map("training_notes")
+}
+
+// ---------- 15. classes ----------
+
+model Class {
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  description         String?
+  trainerId           String      @map("trainer_id") @db.Uuid
+  capacity            Int
+  startsAt            DateTime    @map("starts_at") @db.Timestamptz(6)
+  endsAt              DateTime    @map("ends_at") @db.Timestamptz(6)
+  // decisions.md #11: mặc định 120 phút
+  cancelBeforeMinutes Int         @default(120) @map("cancel_before_minutes")
+  status              ClassStatus @default(SCHEDULED)
+
+  trainer     Trainer           @relation(fields: [trainerId], references: [id])
+  enrollments ClassEnrollment[]
+
+  @@index([startsAt])
+  @@index([trainerId, startsAt])
+  @@map("classes")
+}
+
+// ---------- 16. class_enrollments ----------
+
+model ClassEnrollment {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classId     String           @map("class_id") @db.Uuid
+  memberId    String           @map("member_id") @db.Uuid
+  status      EnrollmentStatus @default(REGISTERED)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  cancelledAt DateTime?        @map("cancelled_at") @db.Timestamptz(6)
+
+  class  Class  @relation(fields: [classId], references: [id])
+  member Member @relation(fields: [memberId], references: [id])
+
+  @@index([memberId])
+  @@map("class_enrollments")
+}
+
+// ---------- 17. notifications ----------
+
+model Notification {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  // PAYMENT_SUCCESS, APPOINTMENT_PROPOSED, SUBSCRIPTION_EXPIRING, ... (xem openapi)
+  type       String
+  title      String
+  body       String
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id") @db.Uuid
+  isRead     Boolean  @default(false) @map("is_read")
+  // chống gửi lặp cho thông báo tự động; null với thông báo thường
+  dedupKey   String?  @unique @map("dedup_key")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}
+
+// ---------- 18. audit_logs (chỉ INSERT, xem rules.sql) ----------
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId    String   @map("actor_id") @db.Uuid
+  // PACKAGE_UPDATE, SUBSCRIPTION_FREEZE, CASH_CONFIRM, USER_LOCK, USER_ROLE_CHANGE, ...
+  action     String
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id") @db.Uuid
+  before     Json?    @db.JsonB
+  after      Json?    @db.JsonB
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([targetType, targetId, createdAt])
+  @@map("audit_logs")
+}

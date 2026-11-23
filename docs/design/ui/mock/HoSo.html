@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Hồ sơ cá nhân và menu tài khoản</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="shell" style="position: relative">
+<aside class="side">
+<a href="TongQuan.html" class="brand"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<span class="side-label">HỘI VIÊN</span>
+<nav aria-label="Menu hội viên"><a href="TongQuan.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg>Tổng quan</a><a href="Main.html#goi-tap"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"></path><path d="M9 8V6a3 3 0 0 1 6 0v2"></path></svg>Mua gói</a><a href="LichTap.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>Lịch tập</a><a href="DanhSachPT.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg>Huấn luyện viên</a><a href="LopHoc.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Lớp học</a><a href="KeHoachHV.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.5"></circle></svg>Kế hoạch tập</a><a href="DonHang.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h6"></path></svg>Đơn và thanh toán</a></nav>
+<div class="side-foot">Cần hỗ trợ? Ra quầy hoặc gọi [SỐ ĐIỆN THOẠI QUẦY].</div>
+</aside>
+<div class="main">
+<header class="topbar">
+<label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm kiếm</span><input type="search" placeholder="Tìm gói, lớp, huấn luyện viên"></label>
+<div class="top-actions">
+<a href="ThongBao.html" class="icon-btn" aria-label="Thông báo, có tin mới"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span class="dot"></span></a>
+<a href="HoSo.html" class="user-chip"><span class="avatar">B</span><span><b>Trần Văn Bảo</b><small>Hội viên</small></span></a>
+</div>
+</header>
+<main class="content enter">
+<div class="page-head"><div><h1 class="h1">Hồ sơ của tôi</h1><p>Sửa họ tên, email, ngày sinh và ảnh đại diện. Số điện thoại là tên đăng nhập nên không đổi ở đây.</p></div><div class="row"></div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 24px; align-items: start">
+<section class="card dark" style="align-items: center; text-align: center; gap: 14px; position: relative; overflow: hidden">
+<div class="blob" style="width: 260px; height: 260px; background: var(--sun-3); top: -140px; opacity: .45"></div>
+<span class="avatar xl" style="position: relative">B</span>
+<b class="h2" style="position: relative">Trần Văn Bảo</b>
+<span class="tag tag-sun plain" style="position: relative">HV000005 · Hội viên</span>
+<label class="btn btn-ghost on-dark btn-sm" style="position: relative"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg> Đổi ảnh<input type="file" accept="image/png,image/jpeg" class="sr"></label>
+<span class="small muted" style="position: relative">JPEG hoặc PNG, tối đa 2 MB.</span>
+</section>
+<form class="card" style="gap: 18px">
+<div class="grid g2" style="gap: 16px">
+<label class="field">Họ và tên<input class="input" type="text" value="Trần Văn Bảo"></label>
+<label class="field">Ngày sinh<input class="input" type="date" value="1999-05-20"></label>
+<label class="field">Số điện thoại<input class="input" type="tel" value="0900000005" disabled style="background: var(--cream-2)"><span class="hint">Đổi số điện thoại: liên hệ quầy.</span></label>
+<label class="field">Email <span class="opt">(không bắt buộc)</span><input class="input" type="email" placeholder="ban@example.com"><span class="hint">Thêm email để tự đặt lại mật khẩu khi quên.</span></label>
+</div>
+<div class="row" style="justify-content: flex-end"><button type="button" class="btn btn-soft">Hủy</button><button type="button" class="btn btn-primary">Lưu thay đổi</button></div>
+</form>
+</div>
+<div class="alert alert-info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg><span>Menu ở góc phải (bấm vào tên) là nơi <b>Đăng xuất</b>, có mở sẵn trong bản vẽ này.</span></div>
+</main>
+</div>
+<div class="menu-pop" role="menu" aria-label="Menu tài khoản">
+<div style="padding: 10px 12px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px"><b>Trần Văn Bảo</b><div class="small muted">0900000005 · Hội viên</div></div>
+<a href="HoSo.html" role="menuitem"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg> Hồ sơ của tôi</a>
+<a href="DoiMatKhau.html" role="menuitem"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="3"></rect><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"></path></svg> Đổi mật khẩu</a>
+<a href="ThongBao.html" role="menuitem"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg> Thông báo</a>
+<a href="DangNhap.html" role="menuitem" style="color: var(--bad)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H5v16h5"></path><path d="M14 8l4 4-4 4M18 12H9"></path></svg> Đăng xuất</a>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -2,6 +2,7 @@
 
 - **Ai sở hữu:** Sơn (FE Lead) viết; Bằng góp ý. Sửa qua PR.
 - **Ai đọc:** Bằng trước khi làm `theme/`, `components/` và màn đầu tiên; Sơn dùng mục 9 để review.
+- **Thiết kế đã chốt chưa, brief Figma, theo dõi màn:** `docs/design/ui/README.md`. Khi thiết kế được chốt, `/fe-design-lock` sinh `docs/design/ui/huong-dan-giao-dien.md` thay cho bộ màu tạm ở mục 2.
 - **Nguồn gốc:** file này giải thích lại cho dễ hiểu. Khi khác nhau, các file sau thắng: `frontend/src/theme/tokens.ts`, `frontend/src/theme/status.ts` (màu), `.claude/rules/frontend-ui.md` (giao diện, chữ), `frontend/CLAUDE.md` (code), `docs/design/fe-architecture.md` (route).
 
 Bằng không cần thuộc hết. Cách làm an toàn: mỗi màn đi theo mục 8 (có Claude), rồi tự đối chiếu mục 9 trước khi mở PR.

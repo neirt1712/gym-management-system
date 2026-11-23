@@ -1,42 +1,43 @@
-version: '3.8'
-
+# Môi trường dev của nhóm. Chủ file: Hồng Anh. ADR 0001: PostgreSQL 16.
+# Chạy:  docker compose up -d postgres mailhog      (pgAdmin tùy chọn: docker compose up -d pgadmin)
+# Extension btree_gist, unaccent, pg_trgm được tạo trong migration Prisma, không cần script init.
 services:
-  # 1. Dịch vụ Database PostgreSQL
-  postgres-db:
-    image: postgres:15-alpine
-    container_name: gym_postgres_db
-    restart: unless-stopped
+  postgres:
+    image: postgres:16-alpine
+    container_name: gym-postgres
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: gym
+      POSTGRES_PASSWORD: gym
+      POSTGRES_DB: gym
+      TZ: UTC
     ports:
-      - "${DB_PORT}:5432"
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - gym_network
+      # Tên volume mới: dữ liệu của Postgres 15 không mở được bằng Postgres 16.
+      - pgdata16:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gym -d gym"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
-  # 2. Dịch vụ pgAdmin (Giao diện xem Database trên Web)
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: gym-mailhog
+    ports:
+      - "1025:1025"   # SMTP cho backend gửi mail
+      - "8025:8025"   # Giao diện xem mail: http://localhost:8025
+
   pgadmin:
-    image: dpage/pgadmin4
-    container_name: gym_pgadmin
-    restart: unless-stopped
+    image: dpage/pgadmin4:8
+    container_name: gym-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: admin@gym.local
+      PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
     depends_on:
-      - postgres-db
-    networks:
-      - gym_network
+      - postgres
 
-# Định nghĩa Volume để dữ liệu không bị mất khi tắt Docker
 volumes:
-  postgres_data:
-
-# Định nghĩa Network để các container giao tiếp với nhau
-networks:
-  gym_network:
-    driver: bridge
+  pgdata16:

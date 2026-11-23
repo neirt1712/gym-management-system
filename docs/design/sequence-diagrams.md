@@ -48,6 +48,72 @@ sequenceDiagram
     BE-->>FE: PAID kèm biên lai
 ```
 
+## VNPay: tạo thanh toán, IPN và trang kết quả (UC12)
+
+Chi tiết hơn nhánh "Trả qua VNPay" ở trên. Nguồn: `docs/api/openapi.yaml` (`POST /orders/{id}/payments`, `GET /payments/vnpay/ipn`, `GET /orders/{id}`).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor HV as Hội viên
+    participant FE as Frontend
+    participant BE as Backend
+    participant DB as PostgreSQL
+    participant VN as VNPay sandbox
+    HV->>FE: Chọn thanh toán VNPay cho đơn PENDING
+    FE->>BE: POST /orders/{id}/payments (VNPAY)
+    BE->>DB: Đơn còn PENDING?
+    opt Đơn đã có payment PENDING (bấm thanh toán lại)
+        BE->>DB: UPDATE payment cũ FAILED
+    end
+    BE->>DB: INSERT payments PENDING (merchant_ref mới), đơn hết hạn sau 30 phút
+    BE->>BE: Ký URL bằng HMAC SHA512 (vnp_TxnRef = merchantRef, vnp_Amount = amount × 100)
+    BE-->>FE: 201 payment kèm checkoutUrl
+    FE->>VN: Chuyển trình duyệt sang checkoutUrl
+    HV->>VN: Nhập thẻ thử, xác nhận
+    par VNPay gọi BE (server với server)
+        VN->>BE: GET /payments/vnpay/ipn?vnp_*
+        alt Sai chữ ký
+            BE-->>VN: RspCode 97
+        else Không có payment theo vnp_TxnRef
+            BE-->>VN: RspCode 01
+        else vnp_Amount khác amount × 100
+            BE-->>VN: RspCode 04
+        else Payment đã xử lý (IPN gửi lặp)
+            BE-->>VN: RspCode 02, không làm gì thêm
+        else vnp_ResponseCode, vnp_TransactionStatus = 00
+            Note over BE,DB: Một transaction (giống confirm-cash)
+            BE->>DB: payment SUCCESS, gateway_txn_id, gateway_payload
+            BE->>DB: đơn PAID, sinh receipt_no
+            BE->>DB: INSERT subscriptions ACTIVE
+            BE->>DB: INSERT notifications PAYMENT_SUCCESS
+            BE-->>VN: RspCode 00
+        else Thanh toán thất bại hoặc hủy
+            BE->>DB: payment FAILED, gateway_payload (đơn vẫn PENDING, trả lại được)
+            BE->>DB: INSERT notifications PAYMENT_FAILED
+            BE-->>VN: RspCode 00
+        end
+    and VNPay đưa người dùng về
+        VN-->>FE: Chuyển về trang kết quả (return URL kèm vnp_*)
+        Note over FE: Không tin tham số trên return URL
+        loop Mỗi 2–3 giây, tối đa khoảng 1 phút
+            FE->>BE: GET /orders/{id}
+            BE-->>FE: status (PENDING hoặc PAID)
+        end
+        alt PAID
+            FE-->>HV: Thành công, hiện biên lai và gói
+        else Vẫn PENDING sau 1 phút
+            FE-->>HV: "Đang chờ xác nhận", nút tải lại hoặc thanh toán lại
+        end
+    end
+```
+
+- IPN có thể tới **trước hoặc sau** khi người dùng về trang kết quả; FE chỉ dựa vào `GET /orders/{id}`.
+- Chống tạo gói hai lần: unique `gateway_txn_id` và "một payment SUCCESS mỗi đơn" (ERD v3). Phải có test IPN gửi lặp và gửi song song (`docs/team/roles/be-lead.md` mục 6).
+- Response IPN luôn HTTP 200 theo định dạng VNPay `{ RspCode, Message }`, không theo dạng lỗi chung.
+- Quá 30 phút không có IPN thành công: job 5 phút chuyển đơn `EXPIRED`, payment PENDING → FAILED (quyết định 9, 17).
+- Chưa chốt (Q17d): IPN báo thành công cho payment đã FAILED vì bị thay bằng lần thanh toán mới.
+
 ## Thương lượng lịch PT (UC23–UC27)
 
 ```mermaid

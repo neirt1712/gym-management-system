@@ -50,9 +50,9 @@ Bản nháp của Sơn và Triển, chốt trong họp 07/10/2026. Áp dụng ch
 
 husky + lint-staged chạy Prettier và ESLint trên file đã stage. Không dùng `--no-verify` để bỏ qua bước này.
 
-- Hook nằm ở `.husky/pre-commit` (gốc repo), hiện **chỉ kiểm file trong `frontend/`**; commit chỉ có `backend/`, `docs/` vẫn đi qua bình thường (Q11, chốt 07/10).
+- Hook nằm ở `.husky/pre-commit` (gốc repo): luôn kiểm file đã stage trong `frontend/`; **chỉ khi commit có file trong `backend/`** mới kiểm thêm phần backend. Commit chỉ có `docs/` đi qua bình thường (Q11, chốt 07/10).
 - Mỗi người chạy `npm install` trong `frontend/` một lần để bật hook trên máy mình.
-- Khi `backend/` có ESLint và Prettier, Triển thêm dòng `cd ../backend && npx lint-staged` vào cuối `.husky/pre-commit` (không chạy `husky init` lần nữa).
+- Người làm backend chạy thêm `npm install` trong `backend/` một lần; thiếu bước này thì commit có file `backend/` sẽ báo lỗi. Máy chỉ làm FE không cần cài backend.
 
 ## Đồng bộ thông tin
 

@@ -6,10 +6,10 @@ Chủ vai trò duyệt file này. Sửa qua PR.
 - `frontend/src/theme/` (token, trạng thái), `frontend/src/components/`: PageHeader, DataTable, FormModal, StatusTag, EmptyState, ErrorState, ConfirmDialog.
 - `frontend/src/features/`: packages-admin, users-admin, staff-counter, check-in, trainer-members, availability, classes-admin, notifications, reports.
 - `frontend/src/pages/`: danh mục gói công khai, staff, admin, các trang PT trừ lịch.
-- Figma: wireframe, sitemap, user flow.
+- Figma: wireframe, sitemap, user flow; tài liệu thiết kế trong `docs/design/ui/` (brief, theo dõi màn, ảnh, nhật ký quyết định). Sơn duyệt và chốt (Q19).
 
 ## 2. Không được sửa
-- `backend/`, `docs/` (chỉ đọc).
+- `backend/`, `docs/` (chỉ đọc), trừ `docs/design/ui/`, `docs/handoff/`, `docs/reports/`.
 - `frontend/src/app/`, `frontend/src/api/` và màn của Sơn: đưa patch để Sơn gắn.
 - Không tự tạo API client, kiểu dữ liệu, `PurchaseFlow`, `AppointmentCard`, `ProposalTimeline` riêng; dùng bản Sơn cung cấp.
 

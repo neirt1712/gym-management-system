@@ -26,7 +26,8 @@
       "Edit(/frontend/src/pages/staff/**)",
       "Edit(/frontend/src/pages/admin/**)",
       "Edit(/frontend/src/pages/trainer/**)",
-      "Edit(/frontend/src/pages/public/Package*)"
+      "Edit(/frontend/src/pages/public/Package*)",
+      "Edit(/docs/design/ui/**)"
     ],
     "ask": [
       "Bash(git commit *)",

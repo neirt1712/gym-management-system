@@ -16,6 +16,9 @@ export const ERROR_HTTP_STATUS = {
   TOKEN_EXPIRED: 400,
   INVALID_FILE: 422,
   PENDING_ORDER_EXISTS: 409,
+  ORDER_NOT_PENDING: 409,
+  FREEZE_LIMIT_REACHED: 409,
+  CLASS_NOT_OPEN: 409,
   CASH_AMOUNT_MISMATCH: 422,
   NO_ACTIVE_SUBSCRIPTION: 422,
   SUBSCRIPTION_EXPIRED: 422,
@@ -39,3 +42,46 @@ export const ERROR_HTTP_STATUS = {
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_HTTP_STATUS;
+
+/**
+ * Câu mặc định cho `message` (tiếng Việt, cho dev đọc; FE xử lý theo `code`), lấy từ cột "Khi nào"
+ * của docs/api/error-codes.md. Nơi ném lỗi muốn câu cụ thể hơn thì truyền `message` riêng.
+ */
+export const ERROR_MESSAGES: Record<ErrorCode, string> = {
+  VALIDATION_ERROR: 'Dữ liệu không hợp lệ',
+  UNAUTHENTICATED: 'Chưa đăng nhập hoặc phiên đã hết hạn',
+  FORBIDDEN: 'Không có quyền',
+  NOT_FOUND: 'Không tìm thấy',
+  INVALID_CREDENTIALS: 'Sai số điện thoại hoặc mật khẩu',
+  ACCOUNT_LOCKED: 'Tài khoản đã bị khóa',
+  ACCOUNT_TEMPORARILY_LOCKED: 'Đăng nhập sai quá 5 lần, tạm khóa',
+  ACTIVATION_REQUIRED: 'SĐT thuộc hồ sơ tại quầy chưa kích hoạt',
+  PHONE_DUPLICATED: 'SĐT đã được dùng',
+  EMAIL_DUPLICATED: 'Email đã được dùng',
+  TOKEN_EXPIRED: 'Link đặt mật khẩu hết hạn hoặc đã dùng',
+  INVALID_FILE: 'Chỉ nhận ảnh JPEG hoặc PNG',
+  PENDING_ORDER_EXISTS: 'Đã có đơn chờ thanh toán cho gói này',
+  ORDER_NOT_PENDING: 'Đơn không còn chờ thanh toán',
+  FREEZE_LIMIT_REACHED: 'Gói đã bảo lưu 1 lần',
+  CLASS_NOT_OPEN: 'Lớp đã hủy hoặc đã bắt đầu',
+  CASH_AMOUNT_MISMATCH: 'Số tiền nhận khác số tiền cần thu',
+  NO_ACTIVE_SUBSCRIPTION: 'Không có gói còn hiệu lực',
+  SUBSCRIPTION_EXPIRED: 'Gói đã hết hạn',
+  SUBSCRIPTION_FROZEN: 'Gói đang bảo lưu',
+  SUBSCRIPTION_NOT_ACTIVE: 'Gói không ở trạng thái ACTIVE',
+  SUBSCRIPTION_NOT_FROZEN: 'Gói không đang bảo lưu',
+  ALREADY_CHECKED_IN: 'Hội viên còn lượt chưa check-out',
+  INVALID_QR: 'Mã QR không hợp lệ',
+  FREEZE_BLOCKED_BY_APPOINTMENTS: 'Gói còn lịch PT trong tương lai',
+  SCHEDULE_CONFLICT: 'Trùng lịch',
+  STALE_VERSION: 'Lịch đã thay đổi, tải lại trước khi thao tác',
+  NO_SESSIONS_AVAILABLE: 'Hết buổi có thể đặt',
+  OUTSIDE_SUBSCRIPTION_PERIOD: 'Giờ đề xuất ngoài thời hạn gói',
+  SESSION_NOT_ENDED: 'Buổi tập chưa kết thúc',
+  NO_CLASS_BENEFIT: 'Gói không có quyền vào lớp',
+  CLASS_FULL: 'Lớp đã đủ chỗ',
+  CANCELLATION_WINDOW_PASSED: 'Đã quá hạn hủy đăng ký lớp',
+  ROLE_CHANGE_NOT_ALLOWED: 'Không đổi được vai trò này',
+  RATE_LIMITED: 'Gọi quá nhiều lần',
+  INTERNAL_ERROR: 'Lỗi hệ thống',
+};

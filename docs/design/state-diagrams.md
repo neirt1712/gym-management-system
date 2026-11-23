@@ -105,7 +105,7 @@ stateDiagram-v2
 - Đăng ký cần gói ACTIVE có `includes_class` (`NO_CLASS_BENEFIT`) và lớp còn chỗ (`CLASS_FULL`).
 - Hạn hủy: trước giờ bắt đầu `cancel_before_minutes` phút, mặc định 120 (quyết định 11); quá hạn thì `CANCELLATION_WINDOW_PASSED`.
 - Hủy rồi đăng ký lại thì tạo dòng mới (unique `(class_id, member_id)` chỉ áp khi REGISTERED).
-- Chưa chốt: Admin hủy lớp thì các đăng ký REGISTERED xử lý thế nào. Chốt khi viết openapi nhóm Lớp học (16/10).
+- Chưa chốt (Q20a): Admin hủy lớp thì các đăng ký REGISTERED giữ nguyên hay chuyển CANCELLED.
 
 ## Lượt check-in (check_ins)
 
