@@ -24,3 +24,5 @@
 | 15 | Thông báo | Mọi vai trò | `/notifications` | UC42 | Bằng | Chưa vẽ | | | | Chưa |
 
 Trang 403, 404 đã có trong code, không cần vẽ.
+
+**Cập nhật 10/10:** đã có mock HTML 44 màn (đủ 44 UC) tại `mock/index.html`, thay cho Figma. Bảng trên (15 màn demo) chưa đối chiếu lại từng dòng với mock; màn còn thiếu ghi ở `quyet-dinh.md` UI-P3.

@@ -8,3 +8,12 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* In biên lai (UC14): chỉ in phần nội dung, ẩn menu, thanh trên và nút. */
+@media print {
+  .no-print,
+  .ant-layout-sider,
+  .ant-layout-header {
+    display: none !important;
+  }
+}

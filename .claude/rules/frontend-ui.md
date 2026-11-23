@@ -49,7 +49,7 @@ Tinh thần: sáng, gọn, nhiều khoảng trắng, một màu nhấn xanh ng�
 
 ## Khi dùng `/impeccable`
 
-- **Mẫu thiết kế chưa chốt** (trạng thái ở `docs/design/ui/README.md`): chỉ được dùng `/impeccable audit` và `/impeccable critique` để xem nhận xét. Không chạy lệnh tạo tài liệu (`init`, `document`, `extract`) hay lệnh sửa giao diện (`polish`, `bolder`, `quieter`, `colorize`, `typeset`, `layout`, `animate`, `delight`, `craft`, `live`…). `/fe-design-lock` xóa dòng này khi Sơn chốt thiết kế.
+- **Mẫu thiết kế chưa chốt** (trạng thái ở `docs/design/ui/README.md`): trên `frontend/src` chỉ được dùng `/impeccable audit` và `/impeccable critique` để xem nhận xét; trên `docs/design/ui/mock/` được dùng đầy đủ để hoàn thiện thiết kế. Mock chỉ là bản demo: khi dựng màn thật thì lấy mock làm gốc và dùng `/impeccable` để hoàn thiện, không chép nguyên HTML/CSS của mock (quyết định UI-13). Hiệu ứng impeccable khuyên tránh thì thay bằng hiệu ứng khác theo phong cách thể thao (quyết định UI-10). Trên `frontend/src` không chạy lệnh tạo tài liệu (`init`, `document`, `extract`) hay lệnh sửa giao diện (`polish`, `bolder`, `quieter`, `colorize`, `typeset`, `layout`, `animate`, `delight`, `craft`, `live`…). `/fe-design-lock` xóa dòng này khi Sơn chốt thiết kế.
 - Impeccable là gợi ý thiết kế. Khi khác quy ước nhóm, **quy ước nhóm thắng**: Ant Design 5 và component dùng chung, token trong `theme/tokens.ts`, màu trạng thái trong `theme/status.ts`, và file này (ví dụ: vẫn dùng `Card` cho màn chi tiết, font Be Vietnam Pro).
 - Không cài hook của impeccable (ADR 0002 D7). Muốn chạy bộ luật phát hiện lỗi thì gọi `/impeccable audit` bằng tay.
 - `/impeccable init` tạo `PRODUCT.md`, `DESIGN.md`: phải dựa trên `docs/spec/` và `docs/design/`, không tự đặt mục tiêu sản phẩm mới.

@@ -60,14 +60,31 @@ describe('Gói tập (e2e)', () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
-    await app.init();
+    // Mở cổng một lần: để supertest tự mở rồi đóng server giữa các request thì có lúc request mới tới
+    // đúng lúc server vừa đóng (lỗi "reading 'address'" trên CI)
+    await app.listen(0, '127.0.0.1');
     jwt = moduleRef.get(JwtService);
     prisma = moduleRef.get(PrismaService);
 
     // TRUNCATE không chạy trigger chặn DELETE của audit_logs, nên xóa sạch được DB test
     await prisma.$executeRawUnsafe('TRUNCATE packages, audit_logs, users RESTART IDENTITY CASCADE');
-    await prisma.user.create({
-      data: { id: ADMIN_ID, phone: '0900000001', fullName: 'Admin test', role: 'ADMIN' },
+    // JwtAuthGuard kiểm token_version trong DB nên mọi người dùng trong test phải có thật
+    await prisma.user.createMany({
+      data: [
+        { id: ADMIN_ID, phone: '0900000001', fullName: 'Admin test', role: 'ADMIN' },
+        {
+          id: '00000000-0000-4000-8000-000000000002',
+          phone: '0900000002',
+          fullName: 'Hội viên test',
+          role: 'MEMBER',
+        },
+        {
+          id: '00000000-0000-4000-8000-000000000003',
+          phone: '0900000003',
+          fullName: 'Staff test',
+          role: 'STAFF',
+        },
+      ],
     });
     await prisma.package.createMany({
       data: [

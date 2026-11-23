@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Hội viên PT phụ trách</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="shell" style="position: relative">
+<aside class="side">
+<a href="LichPT.html" class="brand"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<span class="side-label">HUẤN LUYỆN VIÊN</span>
+<nav aria-label="Menu huấn luyện viên"><a href="LichPT.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>Lịch dạy</a><a href="KhungGio.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Khung giờ rảnh</a><a href="HoiVienPT.html" aria-current="page"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-2.5-5"></path></svg>Hội viên của tôi</a><a href="TheoDoiTap.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.5"></circle></svg>Theo dõi tập</a><a href="ChiTietLop.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Lớp của tôi</a></nav>
+<div class="side-foot">Yêu cầu lịch chưa trả lời sau 24 giờ sẽ được nhắc lại.</div>
+</aside>
+<div class="main">
+<header class="topbar">
+<label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm kiếm</span><input type="search" placeholder="Tìm hội viên"></label>
+<div class="top-actions">
+<a href="ThongBao.html" class="icon-btn" aria-label="Thông báo, có tin mới"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span class="dot"></span></a>
+<a href="HoSo.html" class="user-chip"><span class="avatar">H</span><span><b>Đặng Quốc Huy</b><small>Huấn luyện viên</small></span></a>
+</div>
+</header>
+<main class="content enter">
+<div class="page-head"><div><h1 class="h1">Hội viên của tôi</h1><p>Hội viên có buổi với bạn, số buổi còn lại và buổi kế tiếp.</p></div><div class="row"></div></div>
+<div class="row"><label class="search" style="max-width: 360px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm</span><input type="search" placeholder="Tên hoặc mã hội viên"></label><div class="chips"><button type="button" class="chip" aria-pressed="true">Đang tập</button><button type="button" class="chip" aria-pressed="false">Sắp hết buổi</button><button type="button" class="chip" aria-pressed="false">Tất cả</button></div></div>
+<div class="table-wrap"><table class="tbl">
+<thead><tr><th scope="col">Hội viên</th><th scope="col">Gói</th><th scope="col">Buổi còn lại</th><th scope="col">Buổi kế tiếp</th><th scope="col">Tiến độ</th><th scope="col"><span class="sr">Thao tác</span></th></tr></thead>
+<tbody>
+<tr><td><div class="who"><span class="avatar">B</span><div><b>Trần Văn Bảo</b><div class="small muted">HV000005</div></div></div></td><td>Gym + PT 12 buổi</td>
+<td style="min-width: 180px"><div class="row" style="gap: 10px; flex-wrap: nowrap"><div class="meter" style="flex: 1"><i style="width: 83%"></i></div><b class="num">10/12</b></div></td><td>T4 14/10 · 18:00</td><td><span class="tag tag-warn">35%</span></td><td class="r"><a href="TheoDoiTap.html" class="btn btn-soft btn-sm">Theo dõi</a></td></tr>
+<tr><td><div class="who"><span class="avatar">L</span><div><b>Võ Thị Lan</b><div class="small muted">HV000027</div></div></div></td><td>PT lẻ 8 buổi</td>
+<td style="min-width: 180px"><div class="row" style="gap: 10px; flex-wrap: nowrap"><div class="meter" style="flex: 1"><i style="width: 37%"></i></div><b class="num">3/8</b></div></td><td>T6 16/10 · 07:00</td><td><span class="tag tag-ok">70%</span></td><td class="r"><a href="TheoDoiTap.html" class="btn btn-soft btn-sm">Theo dõi</a></td></tr>
+<tr><td><div class="who"><span class="avatar">A</span><div><b>Nguyễn Văn An</b><div class="small muted">HV000001</div></div></div></td><td>Gym + PT 12 buổi</td>
+<td style="min-width: 180px"><div class="row" style="gap: 10px; flex-wrap: nowrap"><div class="meter" style="flex: 1"><i style="width: 16%"></i></div><b class="num">2/12</b></div></td><td>Chưa đặt</td><td><span class="tag tag-ok">85%</span></td><td class="r"><a href="TheoDoiTap.html" class="btn btn-soft btn-sm">Theo dõi</a></td></tr>
+<tr><td><div class="who"><span class="avatar">Đ</span><div><b>Phạm Minh Đức</b><div class="small muted">HV000012</div></div></div></td><td>PT lẻ 8 buổi</td>
+<td style="min-width: 180px"><div class="row" style="gap: 10px; flex-wrap: nowrap"><div class="meter" style="flex: 1"><i style="width: 100%"></i></div><b class="num">8/8</b></div></td><td>Chưa đặt</td><td><span class="tag">Chưa có kế hoạch</span></td><td class="r"><a href="TheoDoiTap.html" class="btn btn-soft btn-sm">Theo dõi</a></td></tr>
+</tbody></table></div>
+<p class="small muted" style="margin: 0">Dữ liệu mẫu. GET /trainers/{id}/members.</p>
+</main>
+</div>
+
+</div>
+</x-dc>
+</body>
+</html>

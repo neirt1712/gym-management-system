@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đặt lại mật khẩu, kích hoạt tài khoản</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="app" style="display: flex; flex-wrap: wrap">
+<section class="dark-zone" style="flex: 1 1 440px; background: var(--night); color: var(--on-dark); padding: 44px; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; min-height: 380px; position: relative; overflow: hidden">
+<div class="blob" style="width: 440px; height: 440px; background: var(--sun-2); right: -160px; bottom: -120px; opacity: .45"></div>
+<div class="blob" style="width: 260px; height: 260px; background: var(--sun-4); left: -80px; top: 30%; opacity: .3; animation-delay: -4s"></div>
+<a href="Main.html" class="brand" style="color: var(--on-dark); position: relative"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<div class="enter" style="display: flex; flex-direction: column; gap: 20px; position: relative">
+<p class="display" style="margin: 0; font-size: clamp(56px, 7vw, 100px)">Mật khẩu<br><span class="sun-text">mới</span></p>
+<p style="margin: 0; max-width: 440px; font-size: 16px; line-height: 1.6; color: var(--on-dark-2)">Mở từ link trong email. Tài khoản tạo tại quầy cũng kích hoạt ở đây, sau đó đăng nhập như bình thường.</p>
+</div>
+<div class="float" style="position: relative"><img src="" data-anh="cho-cap-nhat" alt="Ảnh phòng tập (ảnh mẫu)" class="pic" style="height: 190px"></div>
+</section>
+<main style="flex: 1 1 500px; padding: 64px 48px; display: flex; align-items: center; justify-content: center">
+<form class="card enter" style="width: 100%; max-width: 460px; padding: 36px; gap: 18px">
+<div class="seg" role="group" aria-label="Trường hợp"><button type="button" aria-pressed="true">Đặt lại mật khẩu</button><button type="button" aria-pressed="false">Kích hoạt tài khoản</button></div>
+<h1 class="h1" style="font-size: 44px">Đặt mật khẩu mới</h1>
+<div class="card soft tight"><span class="row small" style="gap: 10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg><span>Tài khoản <b>0900000005</b> · Trần Văn Bảo</span></span></div>
+<label class="field">Mật khẩu mới<input class="input" type="password" value="matkhaumoi1"><span class="hint">8–72 ký tự.</span></label>
+<label class="field">Nhập lại mật khẩu mới<input class="input bad" type="password" value="matkhaumoi"><span class="err">Hai mật khẩu chưa khớp. (Mẫu lỗi)</span></label>
+<a href="DangNhap.html" class="btn btn-primary btn-block" style="min-height: 54px">Lưu mật khẩu</a>
+<div role="alert" class="alert alert-warn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><span><b>Link hết hạn hoặc đã dùng?</b> <a href="QuenMatKhau.html" class="link">Gửi lại yêu cầu</a>. (Mẫu lỗi TOKEN_EXPIRED)</span></div>
+</form>
+</main>
+</div>
+</x-dc>
+</body>
+</html>

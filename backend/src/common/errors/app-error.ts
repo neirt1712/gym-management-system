@@ -1,4 +1,4 @@
-import { ERROR_HTTP_STATUS, type ErrorCode } from './codes';
+import { ERROR_HTTP_STATUS, ERROR_MESSAGES, type ErrorCode } from './codes';
 
 /**
  * Cách duy nhất để báo lỗi nghiệp vụ. HTTP status lấy từ danh mục, không truyền tay.
@@ -15,7 +15,7 @@ export class AppError extends Error {
     readonly details: unknown = null,
     message?: string,
   ) {
-    super(message ?? code);
+    super(message ?? ERROR_MESSAGES[code]);
     this.name = 'AppError';
     this.status = ERROR_HTTP_STATUS[code];
   }

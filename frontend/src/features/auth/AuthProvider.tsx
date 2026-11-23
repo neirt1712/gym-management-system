@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { configureApiAuth } from '../../api/client';
 import type { AuthApi } from './authApi';
 import { AuthContext, type AuthContextValue, type AuthStatus } from './AuthContext';
-import type { AuthSession, LoginInput, SessionUser } from './types';
+import type { AuthSession, ChangePasswordInput, LoginInput, RegisterInput, SessionUser } from './types';
 
 type Props = { api: AuthApi; children: ReactNode };
 
@@ -55,6 +55,26 @@ export const AuthProvider = ({ api, children }: Props) => {
     [api, applySession],
   );
 
+  const register = useCallback(
+    async (input: RegisterInput) => {
+      const session = await api.register(input);
+      applySession(session);
+      return session.user;
+    },
+    [api, applySession],
+  );
+
+  const changePassword = useCallback(
+    async (input: ChangePasswordInput) => {
+      applySession(await api.changePassword(input));
+    },
+    [api, applySession],
+  );
+
+  const updateUser = useCallback((patch: Partial<Pick<SessionUser, 'fullName' | 'email' | 'avatarUrl'>>) => {
+    setUser((current) => (current ? { ...current, ...patch } : current));
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api.logout();
@@ -64,8 +84,17 @@ export const AuthProvider = ({ api, children }: Props) => {
   }, [api, applySession]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, getAccessToken: () => tokenRef.current, login, logout }),
-    [status, user, login, logout],
+    () => ({
+      status,
+      user,
+      getAccessToken: () => tokenRef.current,
+      login,
+      register,
+      changePassword,
+      updateUser,
+      logout,
+    }),
+    [status, user, login, register, changePassword, updateUser, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

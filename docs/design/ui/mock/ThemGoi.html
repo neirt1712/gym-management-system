@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thêm gói tập (hộp thoại)</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#1B2430}a:hover{color:#1B2430}
+</style>
+</helmet>
+<div class="shell" style="position: relative">
+<aside class="side">
+<a href="DashboardAdmin.html" class="brand"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"></path></svg></span>PHÒNG GYM</a>
+<span class="side-label">QUẢN TRỊ</span>
+<nav aria-label="Menu quản trị"><a href="DashboardAdmin.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Tổng quan</a><a href="DoanhThu.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="3"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 9.5v.01M18 14.5v.01"></path></svg>Doanh thu</a><a href="QuanTriGoi.html" aria-current="page"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4z"></path><path d="M3 7v10l9 4 9-4V7M12 11v10"></path></svg>Gói tập</a><a href="HoiVien.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-2.5-5"></path></svg>Hội viên</a><a href="TaiKhoan.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"></circle><path d="M11 12l9-9M17 6l2.5 2.5M14.5 8.5l2 2"></path></svg>Tài khoản</a><a href="QuanTriLop.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Lớp học</a><a href="GuiThongBao.html"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v3l12 5V6L3 11z"></path><path d="M15 9a3 3 0 0 1 0 6M7 15l1.5 5h3L10 16"></path></svg>Thông báo</a></nav>
+<div class="side-foot">Thao tác nhạy cảm đều được ghi nhật ký.</div>
+</aside>
+<div class="main">
+<header class="topbar">
+<label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span class="sr">Tìm kiếm</span><input type="search" placeholder="Tìm nhanh"></label>
+<div class="top-actions">
+<a href="ThongBao.html" class="icon-btn" aria-label="Thông báo, có tin mới"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span class="dot"></span></a>
+<a href="HoSo.html" class="user-chip"><span class="avatar">D</span><span><b>Phạm Thị Dung</b><small>Quản trị</small></span></a>
+</div>
+</header>
+<main class="content enter">
+<div class="page-head"><div><h1 class="h1">Gói tập</h1></div><div class="row"></div></div><div class="card" style="height: 420px; opacity: .6"></div>
+</main>
+</div>
+<div class="scrim">
+<form class="modal" role="dialog" aria-modal="true" aria-labelledby="tg-title" style="max-width: 660px">
+<div class="modal-head"><h1 id="tg-title" class="h2">Thêm gói</h1><a href="QuanTriGoi.html" class="icon-btn" aria-label="Đóng"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a></div>
+<div class="modal-body">
+<label class="field">Tên gói<input class="input" value="Gym + PT 12 buổi"></label>
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px"><legend class="field" style="padding: 0; margin-bottom: 8px">Loại gói</legend>
+<div class="row"><label class="radio-card" style="padding: 12px 16px"><input type="radio" name="loai">Gym tự do</label><label class="radio-card on" style="padding: 12px 16px"><input type="radio" name="loai" checked><b>Có PT</b></label></div></fieldset>
+<div class="grid g2" style="gap: 14px"><label class="field">Giá (VND)<input class="input" inputmode="numeric" value="4.200.000"></label><label class="field">Thời hạn<span class="row" style="flex-wrap: nowrap; gap: 8px"><input class="input" type="number" value="3" style="width: 90px"><select class="select"><option>Tháng</option><option>Ngày</option></select></span></label></div>
+<div class="grid g2" style="gap: 14px"><label class="field">Số buổi PT<input class="input" type="number" value="12"></label><label class="field">Phút mỗi buổi<input class="input" type="number" value="60"></label></div>
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px"><legend class="field" style="padding: 0; margin-bottom: 8px">Quyền lợi</legend>
+<div class="row" style="flex-wrap: nowrap"><input class="input" aria-label="Quyền lợi 1" value="Ra vào phòng tập không giới hạn"><button type="button" class="icon-btn" aria-label="Xóa quyền lợi 1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+<div class="row" style="flex-wrap: nowrap"><input class="input" aria-label="Quyền lợi 2" value="12 buổi với huấn luyện viên"><button type="button" class="icon-btn" aria-label="Xóa quyền lợi 2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+<button type="button" class="btn btn-soft btn-sm" style="align-self: flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg> Thêm quyền lợi</button></fieldset>
+<div class="field">Ảnh gói <span class="opt">(hiện ở danh mục và trang chi tiết)</span>
+<label class="drop"><img src="" data-anh="cho-cap-nhat" alt="Xem trước ảnh gói (ảnh mẫu)" class="pic sq"><span style="display: flex; flex-direction: column; gap: 4px"><b><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"></path></svg> Kéo ảnh vào đây hoặc bấm để chọn</b><span class="hint">JPEG hoặc PNG, tối đa 2 MB, tỉ lệ 4:3.</span></span><input type="file" accept="image/png,image/jpeg" class="sr"></label>
+</div>
+<label class="check"><input type="checkbox" checked>Gói này được vào lớp học</label>
+<label class="check"><input type="checkbox" checked>Mở bán ngay sau khi lưu</label>
+</div>
+<div class="modal-foot"><a href="QuanTriGoi.html" class="btn btn-soft">Hủy</a><a href="QuanTriGoi.html" class="btn btn-primary">Lưu gói</a></div>
+</form></div>
+</div>
+</x-dc>
+</body>
+</html>
