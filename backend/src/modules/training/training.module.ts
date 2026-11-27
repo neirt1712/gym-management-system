@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
+import { TrainingController } from './training.controller';
+import { TrainingService } from './training.service';
 
 /**
  * Theo dõi tập (5 endpoint): ghi chú, kế hoạch.
- * UC: UC29, UC30 · Người làm: Hồng Anh. Danh sách endpoint: docs/spec/api-v3.md, chi tiết: docs/api/openapi.yaml.
- * Còn rỗng: thêm controller, service, dto/ khi làm endpoint (skill /be-endpoint).
+ * UC: UC29, UC30 · Người làm: Triển (gộp phần của Hồng Anh từ 23/11). Chi tiết: docs/api/openapi.yaml.
  */
-@Module({})
+@Module({
+  controllers: [TrainingController],
+  providers: [TrainingService],
+})
 export class TrainingModule {}

@@ -57,3 +57,20 @@ export class ChangePasswordDto {
   @Length(8, 72)
   newPassword: string;
 }
+
+/** Body của POST /auth/forgot-password (openapi: ForgotPasswordRequest). */
+export class ForgotPasswordDto {
+  @Matches(PHONE_PATTERN, { message: PHONE_MESSAGE })
+  phone: string;
+}
+
+/** Body của POST /auth/reset-password (openapi: ResetPasswordRequest). */
+export class ResetPasswordDto {
+  @IsString()
+  @MinLength(1)
+  token: string;
+
+  @IsString()
+  @Length(8, 72)
+  newPassword: string;
+}

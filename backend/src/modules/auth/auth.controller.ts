@@ -3,13 +3,23 @@ import type { Request, Response } from 'express';
 import { CurrentUser, Public } from '../../common/auth/decorators';
 import type { AuthUser } from '../../common/http/request-context';
 import { AuthService, type IssuedSession } from './auth.service';
-import { ChangePasswordDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import {
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
+import { PasswordResetService } from './password-reset.service';
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from './refresh-cookie';
 
-/** Xác thực: UC01 (đăng ký), UC02 (đăng nhập, refresh), UC03 (đăng xuất), UC06 (đổi mật khẩu). */
+/** Xác thực: UC01 (đăng ký), UC02 (đăng nhập, refresh), UC03 (đăng xuất), UC04 (quên mật khẩu), UC06 (đổi mật khẩu). */
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly passwordReset: PasswordResetService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -45,6 +55,21 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.respond(await this.auth.changePassword(dto, user), res);
+  }
+
+  /** Luôn 202, không lộ SĐT đã đăng ký hay tài khoản có email không (Q17a). */
+  @Public()
+  @HttpCode(202)
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
+    await this.passwordReset.forgot(dto);
+  }
+
+  @Public()
+  @HttpCode(204)
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
+    await this.passwordReset.reset(dto);
   }
 
   private respond({ session, refreshToken }: IssuedSession, res: Response) {

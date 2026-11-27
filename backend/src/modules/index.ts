@@ -15,6 +15,7 @@ import { ClassesModule } from './classes/classes.module';
 import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { HealthModule } from './health/health.module';
+import { JobsModule } from './jobs/jobs.module';
 
 export const FEATURE_MODULES = [
   AuthModule,
@@ -33,4 +34,5 @@ export const FEATURE_MODULES = [
   ReportsModule,
   NotificationsModule,
   HealthModule,
+  JobsModule,
 ];
