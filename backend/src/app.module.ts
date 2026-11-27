@@ -6,6 +6,7 @@ import { AuthCoreModule } from './common/auth/auth-core.module';
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { RolesGuard } from './common/auth/roles.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { MailModule } from './common/mail/mail.module';
 import { FEATURE_MODULES } from './modules';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -20,6 +21,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PrismaModule,
     AuditModule,
     AuthCoreModule,
+    MailModule,
     ...FEATURE_MODULES,
   ],
   providers: [
