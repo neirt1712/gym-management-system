@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuditModule } from './common/audit/audit.module';
 import { AuthCoreModule } from './common/auth/auth-core.module';
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
@@ -18,6 +19,8 @@ import { PrismaModule } from './prisma/prisma.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Bật @Cron cho mọi module (ADR 0001); chỉ gọi forRoot một lần
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuditModule,
     AuthCoreModule,

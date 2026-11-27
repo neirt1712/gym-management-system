@@ -52,5 +52,11 @@ export const BUSINESS = {
     expirePendingOrdersCron: '*/5 * * * *',
     /** Q20b (tự mở lại gói hết kỳ bảo lưu). Quyết định 17 chưa có mốc; Triển chọn 00:05 ngày 23/11 */
     autoUnfreezeCron: '5 0 * * *',
+    /** Gói qua ngày kết thúc chuyển EXPIRED. Quyết định 17 chưa có mốc; Triển chọn 00:10 ngày 28/11 */
+    expireSubscriptionsCron: '10 0 * * *',
+    /** Quét lịch CONFIRMED để nhắc trước 2 giờ. Tần suất Triển chọn 28/11 (mỗi 10 phút) */
+    appointmentReminderCron: '*/10 * * * *',
+    /** Quét buổi chưa xác nhận quá 24 giờ. Tần suất Triển chọn 28/11 (mỗi giờ, phút 15) */
+    trainerConfirmReminderCron: '15 * * * *',
   },
 } as const;
