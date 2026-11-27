@@ -23,6 +23,26 @@ chuyển sang "Đã trả lời"; không đồng ý thì báo Triển sửa (m�
 | Q24h | Giờ Việt Nam | Dùng lệch cố định +07:00 (Việt Nam không có giờ mùa hè), không thêm `date-fns-tz` như `.claude/rules/backend.md` ghi | Hồng Anh | `common/time/vn-date.ts` |
 | Q24i | Gói gia hạn có `startsOn` ở tương lai | Tạo `ACTIVE` ngay khi trả tiền (ERD không có trạng thái "chờ hiệu lực"), nên `GET /subscriptions?status=ACTIVE` trả cả gói chưa bắt đầu; FE so `startsOn` với hôm nay. Check-in không tính gói chưa tới ngày (Q17b) | Huy Trường | `payment-activation.ts` |
 
+## Tạm chốt chờ duyệt (Triển, 23–28/11, gộp backend của Hồng Anh, nhánh `trienw8-be-con-lai`)
+
+Triển được giao làm hết backend còn lại và tự quyết chỗ spec chưa nói. Code và e2e đã làm theo các điểm dưới.
+Người duyệt đồng ý thì chuyển sang "Đã trả lời"; không đồng ý thì báo Triển sửa.
+
+| # | Điểm | Tạm chốt | Duyệt | Nơi áp dụng |
+| --- | --- | --- | --- | --- |
+| Q27a | Đăng ký lớp cần gói nào | Gói `ACTIVE`, `includes_class`, còn hiệu lực **vào ngày học** (start ≤ ngày học ≤ end); thiếu thì `422 NO_CLASS_BENEFIT`. Gửi lặp kiểm trước mọi điều kiện, trả `200` | Huy Trường | `classes.service.ts` `enroll` |
+| Q27b | `GET /classes` | `mine=true`: khách `401`, vai trò khác MEMBER `403`. `status` do người không phải Admin gửi thì bỏ qua (giống `memberId` ở hội viên). Chi tiết lớp xem được cả lớp đã hủy | Huy Trường, Sơn | `classes.service.ts` `list`, `get` |
+| Q27c | Sửa lớp đã hủy | `400 VALIDATION_ERROR` field `status` (Q20i: không mở lại lớp đã hủy) | Huy Trường | `classes.service.ts` `update` |
+| Q27d | Bảo lưu gói chưa tới ngày bắt đầu hoặc đã qua ngày kết thúc | `409 SUBSCRIPTION_NOT_ACTIVE` dù cột status còn ACTIVE | Huy Trường | `subscription-freeze.service.ts` |
+| Q27e | Số ngày bảo lưu thực tế (Q20b) | Từ ngày bắt đầu bảo lưu tới ngày mở, **tính cả hai đầu**, không quá số ngày đã đăng ký; mở ngay trong ngày tính 1 ngày (cột `frozen_days` chỉ nhận 1–30). Lưu lại số ngày thực tế vào `frozen_days` | Huy Trường | `subscription-freeze.service.ts` `reopen` |
+| Q27f | Mốc job chưa có trong quyết định 17 | Tự mở lại bảo lưu 00:05; gói hết hạn chuyển EXPIRED 00:10; quét nhắc lịch mỗi 10 phút; quét nhắc PT xác nhận mỗi giờ (phút 15). Ghi ở `business.config.ts` | Huy Trường | `business.config.ts`, `jobs/` |
+| Q27g | "Nhắc PT xác nhận sau 24 giờ" (quyết định 17) | Hiểu là **xác nhận buổi tập** (COMPLETED/NO_SHOW): buổi CONFIRMED đã kết thúc quá 24 giờ thì nhắc PT một lần | Huy Trường | `jobs.service.ts` `remindTrainerConfirm` |
+| Q27h | Giới hạn gọi quên mật khẩu (`429 RATE_LIMITED`) | 3 lần / 15 phút / SĐT, đếm trong bộ nhớ (chạy local một tiến trình, Q23). Tài khoản LOCKED không nhận link (vẫn `202`) | Huy Trường | `password-reset.service.ts` |
+| Q27i | Loại thông báo mới (`type`) | `CLASS_CANCELLED`, `SUBSCRIPTION_FROZEN`, `SUBSCRIPTION_UNFROZEN`, `SUBSCRIPTION_EXPIRING`, `APPOINTMENT_REMINDER`, `APPOINTMENT_CONFIRM_REMINDER`, `BROADCAST` | Sơn (biểu tượng chuông) | `classes`, `subscriptions`, `jobs`, `notifications` |
+| Q27j | Tên action audit mới | `SUBSCRIPTION_FREEZE`, `SUBSCRIPTION_UNFREEZE`, `MEMBER_PASSWORD_RESET`, `MEMBER_ACTIVATE` (đặt mật khẩu tại quầy cho tài khoản chưa kích hoạt) | Huy Trường | `subscription-freeze.service.ts`, `member-password.service.ts` |
+| Q27k | Thư viện và biến môi trường mới | Thêm `exceljs` (xuất Excel) và `nodemailer` (gửi mail, có trong danh sách công nghệ của `backend/CLAUDE.md`). Biến mới: `SMTP_HOST` (mặc định localhost), `SMTP_PORT` (1025, MailHog), `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `APP_URL` (link FE trong mail, mặc định http://localhost:5173). Chưa thêm vào `.env.example` (Claude không được đọc file .env*) | Hồng Anh (thêm `.env.example`) | `common/mail/`, `reports-export.service.ts` |
+| Q27l | `openapi.yaml` tự mâu thuẫn ở `PATCH /users/{id}/role` | Schema chỉ cho ADMIN/STAFF/TRAINER nhưng mô tả ghi "sang MEMBER trả 422". Code làm theo mô tả (nhận MEMBER để trả 422). Triển sửa schema sau | Triển | `users/dto/user.dto.ts` |
+
 ## Đang mở
 
 | #   | Cụm | Ngày  | Người hỏi | Câu hỏi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Hỏi ai     | Ảnh hưởng ai                                                             | Hạn cần trả lời | Liên quan                                                             |

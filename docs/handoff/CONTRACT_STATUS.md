@@ -13,19 +13,19 @@ Giá trị:
 
 | Nhóm (theo `docs/spec/api-v3.md`) | Số API | openapi | BE | FE | Hẹn BE xong |
 | --- | --- | --- | --- | --- | --- |
-| Xác thực | 7 | Đủ | Đang làm (nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock | 14/10 (Triển); quên mật khẩu 20/11 (Hồng Anh) |
+| Xác thực | 7 | Đủ | Đang làm (đủ 7 API gồm quên/đặt lại mật khẩu; e2e xanh 28/11, nhánh `trienw8-be-con-lai`, chờ merge sau PR #26) | Mock | 14/10 (Triển); quên mật khẩu 20/11 (Hồng Anh) |
 | Hồ sơ | 3 | Đủ | Đang làm (nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock | 14/10 (Triển) |
 | Gói | 4 | Đủ | Đang làm (đủ 4 API, chờ PR `honganhw3-packages`; Real khi có staging 27/10) | Real (danh mục `/packages`, quản trị `/admin/packages`, 08/11) | 16/10 (Hồng Anh) |
 | Đơn hàng | 5 | Đủ | Đang làm (nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock | 21/10 (Triển) |
 | Thanh toán | 5 | Đủ | Đang làm (nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock | Tiền mặt 23/10; VNPay 28/10 (Triển) |
-| Gói hội viên | 4 | Đủ | Đang làm (nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock | Đọc 23/10 (Triển); bảo lưu 13/11 (Hồng Anh) |
+| Gói hội viên | 4 | Đủ | Đang làm (đủ 4 API gồm bảo lưu, mở lại; e2e xanh 28/11, nhánh `trienw8-be-con-lai`, chờ merge sau PR #26) | Mock | Đọc 23/10 (Triển); bảo lưu 13/11 (Hồng Anh) |
 | Check-in | 3 | Đủ | Đang làm (code xong 08/11, nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock (màn xong 08/11 theo openapi, chờ BE) | 23/10 (Hồng Anh) |
-| Hội viên | 4 | Đủ | Đang làm (đủ 4 API, chờ PR `honganhw3-members`; Real khi có staging 27/10) | Real (màn quầy, 08/11) | 21/10 (Hồng Anh) |
+| Hội viên | 4 | Đủ | Đang làm (đủ 4 API + đặt lại mật khẩu tại quầy Q15; e2e xanh 28/11, nhánh `trienw8-be-con-lai`, chờ merge sau PR #26) | Real (màn quầy, 08/11) | 21/10 (Hồng Anh) |
 | PT | 6 | Đủ | Đang làm (code xong 08/11, nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock (màn xong 08/11 theo openapi, chờ BE) | 04/11 (Hồng Anh) |
 | Lịch PT | 7 | Đủ | Đang làm (code xong 08/11, nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock (màn xong 08/11 theo openapi, chờ BE) | 06/11; complete 12/11 (Triển) |
-| Theo dõi tập | 5 | Đủ | Chưa | Chưa | 13/11 (Hồng Anh) |
+| Theo dõi tập | 5 | Đủ | Đang làm (đủ 5 API; e2e xanh 28/11, nhánh `trienw8-be-con-lai`, chờ merge sau PR #26) | Chưa | 13/11 (Hồng Anh) |
 | Tài khoản | 6 | Đủ | Đang làm (code xong 08/11, nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26) | Mock (màn xong 08/11 theo openapi, chờ BE) | 16/10 (Hồng Anh) |
-| Lớp học | 7 | Đủ | Chưa | Chưa | 20/11 (Triển) |
-| Báo cáo | 4 | Đủ | Chưa | Chưa | 26/11 (Triển) |
-| Thông báo | 3 | Đủ | Đang làm (code xong 08/11, nhánh `tsonw4-tich-hop`, e2e xanh 10/11, chờ merge PR #26; thông báo chưa có broadcast) | Mock (màn xong 08/11 theo openapi, chờ BE) | 28/10; broadcast 20/11 (Hồng Anh) |
-| Vận hành | 1 | Đủ | Chưa | — | 09/10 (Triển) |
+| Lớp học | 7 | Đủ | Đang làm (đủ 7 API; e2e xanh 28/11, nhánh `trienw8-be-con-lai`, chờ merge sau PR #26) | Chưa | 20/11 (Triển) |
+| Báo cáo | 4 | Đủ | Đang làm (đủ 4 API gồm xuất Excel; e2e xanh 28/11, nhánh `trienw8-be-con-lai`, chờ merge sau PR #26) | Chưa | 26/11 (Triển) |
+| Thông báo | 3 | Đủ | Đang làm (đủ 3 API gồm broadcast; e2e xanh 28/11, nhánh `trienw8-be-con-lai`, chờ merge sau PR #26) | Mock (màn xong 08/11 theo openapi, chờ BE) | 28/10; broadcast 20/11 (Hồng Anh) |
+| Vận hành | 1 | Đủ | Đang làm (`GET /health` có từ PR #21, e2e xanh 28/11) | — | 09/10 (Triển) |
